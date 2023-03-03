@@ -1,7 +1,5 @@
 # CSCI3280 Project!!
 
-Put your sources here.
-
 ## Steps for Compilation
 
 I used CMake here because it just works on every operating system on this planet. We can change it if this is undesirable.
@@ -30,11 +28,19 @@ This command only needs to run after `CMakeLists.txt` is changed (to regenerate 
 cmake --build build [--config <Debug or Release>]
 ```
 
-This builds the project. The `--config` flag may have for some build systems.
+This builds the project. The `--config` flag may be needed for some build systems (Visual Studio?).
 
-4. Including Libraries
+4. Running the program
 
-Use `PkgConfig` magic to find the library files and headers.
+```sh
+./build/<name of executable>
+```
+
+CMake places the executable in the `build` folder.
+
+5. Including Libraries
+
+Use `PkgConfig` magic to find the library files and headers, like below for `gtkmm4`.
 
 ```cmake
 # magic
@@ -63,6 +69,8 @@ git commit
 ```
 
 Git will use the editor specified in `$EDITOR` environment variable. If it is empty `vim` will be used. Write the commit message, then save and quit.
+
+By the way, don't commit build artifacts (anything that is produced by CMake)!!
 
 3. Push to a remote repository
 
