@@ -83,7 +83,8 @@ Lrc::Lrc(const char *path){
             color = lys.back().color;
         
         // not Enhanced LRC format -> process each timestamp -> next line
-        if(s.find("<")<0){
+        if(s.find("<")==-1){
+            s += '\0';
             for(int i = 0; i < time.size(); i++){
                 unsigned int ms = sTimetoms(time[i]);
                 if(ms>=0)
@@ -124,7 +125,9 @@ Lrc::Lrc(const char *path){
                     s2 += words[j] + (j==words.size()-1 ? "" : " ");
             lys.push_back({ms, s1, color, s2});
         }
+        lys.back().s1 += '\0';
     }
+    fin.close();
 
     std::stable_sort(lys.begin(), lys.end());
     
@@ -132,8 +135,8 @@ Lrc::Lrc(const char *path){
         if(lys[i].ms-offset)  // in case resulted ms<0
             lys[i].ms -= offset;
 
-    for(int i=0; i<lys.size(); i++)
-        printf("%d %s %d %s\n",lys[i].ms, lys[i].s1.c_str(), lys[i].color, lys[i].s2.c_str());
+    // for(int i=0; i<lys.size(); i++)
+    //     printf("%d %s %d %s\n",lys[i].ms, lys[i].s1.c_str(), lys[i].color, lys[i].s2.c_str());
 }
 
 unsigned int Lrc::sTimetoms(std::string s){ // mm:ss.xx -> ms
@@ -166,7 +169,7 @@ Lyric Lrc::getLyric(int millisec){
 std::vector<std::string> Lrc::getAllLyrics(){
     std::vector<std::string> tmp(0);
     for(int i = 1; i < lys.size(); i++) //lys[0] is empty
-        if(lys[i].s2 == "")
-            tmp.push_back(lys[i].s1);
+        if(lys[i].s1.back() == '\0')
+            tmp.push_back(lys[i].s1 + lys[i].s2);
     return tmp;
 }
