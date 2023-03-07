@@ -51,6 +51,48 @@ pkg_check_modules(GTKMM_VARS REQUIRED IMPORTED_TARGET gtkmm-4.0)
 target_link_libraries(p2pmss PRIVATE PkgConfig::GTKMM_VARS)
 
 ```
+## Testing
+
+If you have too much time, you can write some tests for it. Currently I have setup google test (it is open source so no worries) for this project. It should be automatically downloaded the first time when you generate the build config.
+
+To add a test, create a new file in `src/tests/` with name starting with `test_*.cpp`. Inside the file you define tests. One test is one suite.
+
+Each test looks like this:
+
+```cpp
+TEST(TestSuiteName, TestName) {
+  // assertions and C++ code
+}
+```
+
+Please read [their testing primer](https://google.github.io/googletest/primer.html) for more details.
+
+After you typed the file, the file can be added as a separate executable in `CMakeLists.txt`:
+
+```cmake
+add_executable(
+  testExe
+  test_whatever.cpp
+  <...other helper files if needed>
+)
+target_link_libraries(
+  testExe
+  GTest::gtest_main
+)
+gtest_discover_tests(testExe)
+```
+
+The executable is just like any other thing you build but linked with google tests. `gtest_discover_tests` is required for `ctest` to acknowledge its existence.
+
+Build the project as usual, and run:
+
+```sh
+ctest --test-dir build
+```
+
+Or you can `cd` into the build directory first and run `ctest`.
+
+More information is on [their docs on CMake](https://google.github.io/googletest/quickstart-cmake.html) and [on this website](https://cmake.org/cmake/help/git-stage/module/GoogleTest.html).
 
 ## Version Control
 
