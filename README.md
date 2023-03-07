@@ -99,3 +99,7 @@ git pull
 ```
 
 I would recommend you committing the changes in your working directory before pulling anything new.
+
+## Formatting
+
+I recommend following Anthony's style in `lrc.h` and `lrc.cpp`, which is **four spaces**.
