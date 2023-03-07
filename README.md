@@ -67,19 +67,10 @@ TEST(TestSuiteName, TestName) {
 
 Please read [their testing primer](https://google.github.io/googletest/primer.html) for more details.
 
-After you typed the file, the file can be added as a separate executable in `CMakeLists.txt`:
+I made a function in `CMakeLists.txt` so that tests can be added easily:
 
 ```cmake
-add_executable(
-  testExe
-  test_whatever.cpp
-  <...other helper files if needed>
-)
-target_link_libraries(
-  testExe
-  GTest::gtest_main
-)
-gtest_discover_tests(testExe)
+add_test(targetName <...needed sources>)
 ```
 
 The executable is just like any other thing you build but linked with google tests. `gtest_discover_tests` is required for `ctest` to acknowledge its existence.
@@ -87,7 +78,7 @@ The executable is just like any other thing you build but linked with google tes
 Build the project as usual, and run:
 
 ```sh
-ctest --test-dir build
+ctest --test-dir build --output-on-failure
 ```
 
 Or you can `cd` into the build directory first and run `ctest`.
