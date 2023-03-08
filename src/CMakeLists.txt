@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.2)
 # project name, can be changed
 project(csci3280-project CXX)
 
-# gtkmm4 uses some feaetures in C++17
+# see which configuration we are in
+message( STATUS "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}" )
+
+# gtkmm4 uses some features in C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -38,11 +41,11 @@ endfunction()
 # with the format: <target name> <...source files>
 # for example, test_lrc.cpp needs lrc.cpp, so I list both of them here
 # and this will compile into an executable called test_lrc
-add_test(test_lrc tests/test_lrc.cpp lrc.cpp)
+add_test(test_lrc tests/test_lrc.cpp util.cpp lrc.cpp)
 
 # main executable
 # add source files here
 # p2pmss will be the executable that has the main function
-add_executable(p2pmss main.cpp lrc.cpp)
+add_executable(p2pmss main.cpp util.cpp lrc.cpp)
 # we link p2pmss with the necessary libraries like gtkmm4
 target_link_libraries(p2pmss PRIVATE PkgConfig::GTKMM_VARS)

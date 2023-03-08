@@ -28,8 +28,6 @@ TEST(lrc_test, get_lyrics) {
 }
 
 TEST(lrc_test, get_random_lines) {
-    // this will not coredump but it always gets empty string?
-    // check jamaica_farewell.lrc for the timestamps
     Lrc f("../src/tests/data/jamaica_farewell.lrc");
     auto expected = {
         std::make_pair(std::string("Jamaica Farewell"), 100), // 00:01.00
@@ -43,16 +41,14 @@ TEST(lrc_test, get_random_lines) {
         std::make_pair(std::string("End"), 174690)}; // 02:54.69
     for (auto &e : expected) {
         auto line = f.getLyric(e.second);
-        EXPECT_THAT(line.s2, Eq(e.first));
+        EXPECT_THAT(line.s1, Eq(e.first));
     }
 }
 
 TEST(lrc_test, enhanced_ignores_inner_timestamps_when_get_lyrics) {
-    // when ctest is executing, it is in the build directory
     Lrc f("../src/tests/data/test.lrc");
     // this should be after 06:47 + 500ms
-    // so it should by "abc and def..."
     Lyric line = f.getLyric(6971);
-    // but it omits "abc"?
-    EXPECT_THAT(line.s2, Eq(std::string("abc and def you haha")));
+    EXPECT_THAT(line.s1, Eq(std::string("Abc ")));
+    EXPECT_THAT(line.s2, Eq(std::string("and def you haha")));
 }
