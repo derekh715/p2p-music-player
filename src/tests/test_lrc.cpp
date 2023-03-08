@@ -1,5 +1,4 @@
 #include "../lrc.h"
-#include "gmock/gmock.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <string>
@@ -51,4 +50,36 @@ TEST(lrc_test, enhanced_ignores_inner_timestamps_when_get_lyrics) {
     Lyric line = f.getLyric(6971);
     EXPECT_THAT(line.s1, Eq(std::string("Abc ")));
     EXPECT_THAT(line.s2, Eq(std::string("and def you haha")));
+}
+
+TEST(lrc_test, invalid_file) {
+    Lrc f("this_file_doesnt_exist!");
+    EXPECT_THAT(f.failed(), Eq(true));
+}
+
+TEST(lrc_test, reading_lyrics_other_than_ascii) {
+    // just test a few lines is enough
+    Lrc f("../src/tests/data/apple_of_my_eye.lrc");
+    std::vector<std::string> lines = f.getAllLyrics();
+    lines = std::vector<std::string>(lines.begin(), lines.begin() + 6);
+    std::vector<std::string> expected = {
+        std::string("又回到最初的起點"),
+        std::string("記憶中妳青澀的臉"),
+        std::string("我們終於來到了這一天"),
+        std::string("桌墊下的老照片"),
+        std::string("無數回憶連結"),
+        std::string("今天男孩要赴女孩最後的約"),
+    };
+    EXPECT_THAT(lines, ContainerEq(expected));
+    Lrc g("../src/tests/data/ikenai_taiyou.lrc");
+    lines = g.getAllLyrics();
+    lines = std::vector<std::string>(lines.end() - 10, lines.end() - 5);
+    expected = {
+        std::string("ABC 続かない　そんなんじゃ　ダメじゃない"),
+        std::string("だって　ココロの奧は違うんじゃない？"),
+        std::string("オレの青春　そんなもんじゃない"),
+        std::string("熱く奧で果てたいよ"),
+        std::string("きっと　キミじゃなきゃ　やだよ"),
+    };
+    EXPECT_THAT(lines, ContainerEq(expected));
 }

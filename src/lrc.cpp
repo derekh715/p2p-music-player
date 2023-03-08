@@ -15,10 +15,17 @@ Lrc::Lrc(const char *path){
     offset = 0;
     editor = "";
     version = "";
+    failure = false; // assume the file works first
     lys.clear();
     lys.push_back({0, ""}); // no lyric since 0 ms
 
     std::ifstream fin(path);
+    // if the file failed to load quit early
+    if (!fin) {
+        failure = true;
+        return;
+    }
+
     while(!fin.eof()){
         std::string s;
         std::getline(fin, s);
@@ -180,4 +187,8 @@ std::vector<std::string> Lrc::getAllLyrics(){
         }
     }
     return tmp;
+}
+
+bool Lrc::failed() {
+    return failure;
 }

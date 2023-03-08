@@ -21,6 +21,7 @@ class Lrc{
         std::vector<std::string> getAllLyrics();
         static unsigned int sTimetoms(std::string s);
         static std::string removeSpace(std::string s); //remove space in the begining and ending
+        bool failed(); // this is a getter so that the consumer cannot change this
 
     private:
         std::string album;  //[al:Album where the song is from]
@@ -33,7 +34,7 @@ class Lrc{
         std::string editor; //[re:The player or editor that created the LRC file]
         std::string version;//[ve:version of program]
         std::vector<Lyric> lys; 
-
+        bool failure;
 };
 
 #endif
