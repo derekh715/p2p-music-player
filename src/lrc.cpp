@@ -142,7 +142,7 @@ Lrc::Lrc(const char *path){
     std::stable_sort(lys.begin(), lys.end());
 
     for(int i=1; i<lys.size(); i++) // lys[0] is empty
-        if(lys[i].ms-offset)  // in case resulted ms<0
+        if(lys[i].ms-offset>0)  // in case resulted ms<0
             lys[i].ms -= offset;
 
     // for(int i=0; i<lys.size(); i++)
