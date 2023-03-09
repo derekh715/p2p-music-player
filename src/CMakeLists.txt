@@ -37,10 +37,10 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 include(GoogleTest)
 
-function(add_test target)
+function(add_test target libs)
   add_executable(${target} ${ARGN})
   # each test needs these two libraries
-  target_link_libraries(${target} GTest::gtest_main GTest::gmock)
+  target_link_libraries(${target} GTest::gtest_main GTest::gmock ${libs})
   # let ctest acknowledge the existence of our target
   gtest_discover_tests(${target})
 endfunction()
@@ -49,7 +49,8 @@ endfunction()
 # with the format: <target name> <...source files>
 # for example, test_lrc.cpp needs lrc.cpp, so I list both of them here
 # and this will compile into an executable called test_lrc
-add_test(test_lrc tests/test_lrc.cpp util.cpp lrc.cpp)
+add_test(test_lrc "" tests/test_lrc.cpp util.cpp lrc.cpp)
+add_test(test_db SQLiteCpp tests/test_db.cpp store.cpp)
 
 # main executable
 # add source files here
