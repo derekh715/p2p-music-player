@@ -1,4 +1,5 @@
 #include "store.h"
+#include "SQLiteCpp/Statement.h"
 
 bool operator==(const Track &lhs, const Track &rhs) {
     return (lhs.id == rhs.id && lhs.album == rhs.album &&
@@ -74,5 +75,31 @@ std::vector<Track> Store::read_all() {
     return tracks;
 }
 
-bool Store::update(int id, Track &t) { return false; }
-bool Store::remove(int id) { return false; };
+bool Store::update(int id, Track &t) {
+    SQLite::Statement q(db, "UPDATE tracks "
+                            "SET "
+                            "album = :album,"
+                            "artist = :artist,"
+                            "author = :author,"
+                            "title = :title,"
+                            "len = :len "
+                            "WHERE id = :id");
+    q.bind(":album", t.album);
+    q.bind(":artist", t.artist);
+    q.bind(":author", t.author);
+    q.bind(":title", t.title);
+    q.bind(":len", t.len);
+    q.bind(":id", id);
+
+    int nrows = q.exec();
+    return nrows == 1; // something is wrong if zero rows or more than one row
+                       // is affected
+}
+
+bool Store::remove(int id) {
+    SQLite::Statement q(db, "DELETE FROM tracks "
+                            "WHERE id = :id");
+    q.bind(":id", id);
+    int nrows = q.exec();
+    return nrows == 1;
+};
