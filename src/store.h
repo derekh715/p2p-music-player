@@ -41,6 +41,9 @@ class Store {
     // delete one track (can't use the word delete in C++)
     bool remove(int id);
 
+    // search with text
+    std::vector<Track> search(std::string str);
+
   private:
     SQLite::Database db;
     // helper function that turns a column into Track struct

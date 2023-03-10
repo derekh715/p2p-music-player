@@ -1,5 +1,7 @@
 #include "store.h"
 #include "SQLiteCpp/Statement.h"
+#include "util.h"
+#include <cstdio>
 #include <filesystem>
 #include <system_error>
 
@@ -136,3 +138,25 @@ bool Store::remove(int id) {
     int nrows = q.exec();
     return nrows == 1;
 };
+
+std::vector<Track> Store::search(std::string str) {
+    std::vector<Track> tracks;
+    SQLite::Statement q(db, "SELECT * FROM tracks "
+                            "WHERE album LIKE :album OR "
+                            "artist LIKE :artist OR "
+                            "author LIKE :author OR "
+                            "title LIKE :title");
+    char *sandwiched = new char[str.size() + 15];
+    snprintf(sandwiched, str.size() + 15, "%%%s%%", str.c_str());
+    q.bind(":album", sandwiched);
+    q.bind(":artist", sandwiched);
+    q.bind(":author", sandwiched);
+    q.bind(":title", sandwiched);
+    delete[] sandwiched;
+    while (q.executeStep()) {
+        Track t;
+        populate_track_from_get_column(q, t);
+        tracks.push_back(t);
+    }
+    return tracks;
+}
