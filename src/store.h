@@ -11,6 +11,7 @@ struct Track {
     std::string artist;
     std::string author;
     std::string title;
+    std::string lrcfile;
     int len;
     friend bool operator==(const Track &lhs, const Track &rhs);
 };
@@ -45,6 +46,7 @@ class Store {
     // helper function that turns a column into Track struct
     // the consumer should executeStep first
     void populate_track_from_get_column(SQLite::Statement &q, Track &t);
+    bool get_absolute_file(std::string name, std::filesystem::path &path);
 };
 
 #endif

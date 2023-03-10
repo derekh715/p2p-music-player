@@ -1,10 +1,13 @@
 #include "store.h"
 #include "SQLiteCpp/Statement.h"
+#include <filesystem>
+#include <system_error>
 
 bool operator==(const Track &lhs, const Track &rhs) {
     return (lhs.id == rhs.id && lhs.album == rhs.album &&
             lhs.artist == rhs.artist && lhs.author == rhs.author &&
-            lhs.len == rhs.len && lhs.title == rhs.title);
+            lhs.len == rhs.len && lhs.title == rhs.title &&
+            lhs.lrcfile == rhs.lrcfile);
 }
 
 Store::Store(bool development, std::string filename)
@@ -16,22 +19,43 @@ Store::Store(bool development, std::string filename)
     db.exec("CREATE TABLE IF NOT EXISTS tracks ("
             "id INTEGER PRIMARY KEY,"
             "album STRING, artist STRING, author STRING,"
-            "title STRING, len INTEGER"
+            "title STRING, len INTEGER, lrcfile STRING"
             ")");
     std::cout << "Tables created!" << std::endl;
 }
 bool Store::create(Track &t) {
+    std::filesystem::path abs;
+    if (!t.lrcfile.empty()) {
+        if (!get_absolute_file(t.lrcfile, abs)) {
+            return false;
+        }
+    }
+
     SQLite::Statement q(
-        db, "INSERT INTO tracks (album, artist,  author, title, len) "
-            "VALUES (:album, :artist, :author, :title, :len)");
+        db, "INSERT INTO tracks (album, artist,  author, title, len, lrcfile) "
+            "VALUES (:album, :artist, :author, :title, :len, :lrcfile)");
     q.bind(":album", t.album);
     q.bind(":artist", t.artist);
     q.bind(":author", t.author);
     q.bind(":title", t.title);
     q.bind(":len", t.len);
+    q.bind(":lrcfile", abs.string());
     int nrows = q.exec();
     return nrows ==
            1; // something is wrong if zero rows or more rows are affected
+}
+
+bool Store::get_absolute_file(std::string name, std::filesystem::path &path) {
+    std::error_code ec;
+    std::filesystem::path rel = std::filesystem::path(name);
+    path = std::filesystem::canonical(rel, ec);
+    // that absolute path does not exist in the system
+    if (ec.value() != 0) {
+        // probably won't do this in the graphical interface...
+        std::cerr << ec.message() << std::endl;
+        return false;
+    }
+    return true;
 }
 
 Track Store::read(int id) {
@@ -54,6 +78,7 @@ void Store::populate_track_from_get_column(SQLite::Statement &q, Track &t) {
     const char *artist = q.getColumn("artist");
     const char *author = q.getColumn("author");
     const char *title = q.getColumn("title");
+    const char *lrcfile = q.getColumn("lrcfile");
     int len = q.getColumn("len");
 
     t.id = id;
@@ -76,12 +101,19 @@ std::vector<Track> Store::read_all() {
 }
 
 bool Store::update(int id, Track &t) {
+    std::filesystem::path abs;
+    if (!t.lrcfile.empty()) {
+        if (!get_absolute_file(t.lrcfile, abs)) {
+            return false;
+        }
+    }
     SQLite::Statement q(db, "UPDATE tracks "
                             "SET "
                             "album = :album,"
                             "artist = :artist,"
                             "author = :author,"
                             "title = :title,"
+                            "lrcfile = :lrcfile,"
                             "len = :len "
                             "WHERE id = :id");
     q.bind(":album", t.album);
@@ -89,6 +121,7 @@ bool Store::update(int id, Track &t) {
     q.bind(":author", t.author);
     q.bind(":title", t.title);
     q.bind(":len", t.len);
+    q.bind(":lrcfile", abs.string());
     q.bind(":id", id);
 
     int nrows = q.exec();
