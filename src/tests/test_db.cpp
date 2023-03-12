@@ -118,3 +118,29 @@ TEST(db_test, adding_valid_lrc_file_path) {
     bool success = s.create(t);
     EXPECT_THAT(success, Eq(true));
 }
+
+TEST(db_test, matches_nothing) {
+    Store s(true, ":memory:");
+    auto tracks = s.search("Hello");
+    EXPECT_THAT(tracks.empty(), Eq(true));
+}
+
+TEST(db_test, matches_one_or_more) {
+    Store s(true, ":memory:");
+    // some random info
+    Track t = {
+        .id = 1,
+        .album = "Try to Forget",
+        .artist = "The Brothers Five",
+        .author = "The Brothers Five",
+        .title = "Try to Forget",
+        .len = (120 + 55) * 1000,
+    };
+    s.create(t);
+    auto entries = s.search("five");
+    EXPECT_THAT(entries[0], Eq(t)); // it should exist
+    entries = s.search("to");
+    EXPECT_THAT(entries[0], Eq(t)); // it should exist
+    entries = s.search("ve");
+    EXPECT_THAT(entries[0], Eq(t)); // it should exist
+}
