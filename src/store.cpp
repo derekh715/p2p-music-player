@@ -12,9 +12,9 @@ bool operator==(const Track &lhs, const Track &rhs) {
             lhs.lrcfile == rhs.lrcfile);
 }
 
-Store::Store(bool development, std::string filename)
+Store::Store(bool drop_all, std::string filename)
     : db(filename, SQLite::OPEN_CREATE | SQLite::OPEN_READWRITE) {
-    if (development) {
+    if (drop_all) {
         db.exec("DROP TABLE IF EXISTS tracks");
         std::cout << "Tables dropped!" << std::endl;
     }
