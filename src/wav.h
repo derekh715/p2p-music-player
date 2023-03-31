@@ -1,30 +1,26 @@
-#ifndef WAV_H
-#define WAV_H
+// CSCI3280 Phase 1
+// Thomas + Anthony
 
-#include <vector>
+#include <fstream>
+#include <iostream>
+struct WavHeaderCDT;
+typedef WavHeaderCDT* WavHeaderADT;
 
-class Wav{
-    public:
-        Wav();
-        Wav(const char *path);
-        bool openWavFile(const char *path); // to return false if file not open
-        unsigned int getNumChannel();
-        unsigned int getSampleRate();
-
-        void getDataChunk(unsigned char * a, double startsec, unsigned int bufferSize);
-        double getAmplitude(unsigned short int ch, double sec);
-
-    private:
-        unsigned int chunkSize;
-        unsigned short int numChannel;
-        unsigned int sampleRate;
-        unsigned int byteRate;  // byteRate/sampleRate = byte per sample
-        unsigned short int blockAlign;  // blockAlign = byte per sample?
-        unsigned short int bitPerSample;    // per sample *per channel*
-        unsigned int dataSize;  // total number of bytes
-        std::vector<unsigned char> dataChunk;
-        std::vector<std::vector<int>> data;
-        unsigned int base;  // for getAmplitude() so that no need to cal each time
+class Wav {
+public:
+    Wav();
+    Wav(const char* FilePath);
+    bool openWavFile(const char* FilePath);
+    unsigned int getAudioFormat();
+    unsigned int getNumChannels();
+    unsigned int getSampleRate();
+    unsigned int getByteRate();
+    unsigned int getBlockAlign();
+    unsigned int getBitsPerSample();
+    unsigned int getSubchunk2Size();
+    const char* getData();
+    unsigned int getDataPos(unsigned int TimeInMilliseconds);
+private:
+    WavHeaderADT WavHeader;
+    char* data = nullptr;
 };
-
-#endif
