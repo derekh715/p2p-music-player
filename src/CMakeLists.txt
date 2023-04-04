@@ -5,14 +5,23 @@ project(csci3280-project CXX)
 # see which configuration we are in
 message( STATUS "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}" )
 
-# gtkmm4 uses some features in C++17
+# modern cpp features
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# set extra flags here if you need
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # magic
 find_package(PkgConfig)
 
-pkg_check_modules(GTKMM_VARS REQUIRED IMPORTED_TARGET gtkmm-4.0)
+pkg_check_modules(gtk3 REQUIRED IMPORTED_TARGET gtkmm-3.0)
+pkg_check_modules(gstreamer REQUIRED IMPORTED_TARGET gstreamer-1.0>=1.4)
+pkg_check_modules(gstreamer-sdp REQUIRED IMPORTED_TARGET gstreamer-sdp-1.0>=1.4)
+pkg_check_modules(gstreamer-app REQUIRED IMPORTED_TARGET gstreamer-app-1.0>=1.4)
+pkg_check_modules(gstreamer-video REQUIRED IMPORTED_TARGET gstreamer-video-1.0>=1.4)
+pkg_check_modules(gstreamer-audio REQUIRED IMPORTED_TARGET gstreamer-audio-1.0>=1.4)
+pkg_check_modules(taglib REQUIRED IMPORTED_TARGET taglib)
 
 # pull those libraries here and build them
 include(FetchContent)
@@ -55,6 +64,15 @@ add_test(test_db SQLiteCpp tests/test_db.cpp store.cpp)
 # main executable
 # add source files here
 # p2pmss will be the executable that has the main function
-add_executable(p2pmss main.cpp util.cpp lrc.cpp store.cpp)
+add_executable(p2pmss main.cpp util.cpp lrc.cpp store.cpp application.cpp
+  wav.cpp listfiles.cpp)
 # we link p2pmss with the necessary libraries like gtkmm4
-target_link_libraries(p2pmss PRIVATE PkgConfig::GTKMM_VARS SQLiteCpp)
+target_link_libraries(p2pmss PRIVATE
+  PkgConfig::gtk3 SQLiteCpp
+  PkgConfig::gstreamer
+  PkgConfig::gstreamer-sdp
+  PkgConfig::gstreamer-app
+  PkgConfig::gstreamer-video
+  PkgConfig::gstreamer-audio
+  PkgConfig::taglib
+)

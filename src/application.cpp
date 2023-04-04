@@ -2,6 +2,7 @@
 // Thomas
 
 #include "application.h"
+#include <filesystem>
 
 struct MusicInfoCDT {
     Glib::ustring FileName = "", FilePath, SortFileName, SortTitle, DurationString = "99:59:59.999", Title = "", Album = "", Artist = "", Extension;
@@ -30,7 +31,16 @@ MyApplication::MyApplication()
 
     gst_init(NULL, NULL);
 
-    resources->create_from_file("src")->register_global();
+    // it depends on where you invoke the executable
+    // if you are invoking it inside the src directory
+    // then the if branch will be taken
+    // else it will assume you are invoking it from the project root
+    if (std::filesystem::is_regular_file("src")) {
+        resources->create_from_file("src")->register_global();
+    } else {
+        resources->create_from_file("src/src")->register_global();
+    }
+
     wav = new Wav;
     refBuilder = Gtk::Builder::create();
     try

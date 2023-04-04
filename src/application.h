@@ -100,8 +100,8 @@ private:
     Glib::RefPtr<Gtk::ListStore> pListStore2;
     Gtk::TreeView* pTreeView2 = nullptr;
     Glib::RefPtr<Gtk::TreeSelection> pTreeSelection2;
-    Glib::ustring UserDirectory = Glib::ustring(getenv("USERPROFILE"));
-    Glib::ustring DefaultDirectory = Glib::ustring(getenv("USERPROFILE")) + "\\Music";
+    Glib::ustring UserDirectory = Glib::get_home_dir();
+    Glib::ustring DefaultDirectory = Glib::get_home_dir() + "\\Music";
     Glib::ustring Directory = DefaultDirectory;
 
 
@@ -274,6 +274,3 @@ private:
 };
 
 // #endif /* GTKMM_EXAMPLEAPPLICATION_H */
-
-
-
