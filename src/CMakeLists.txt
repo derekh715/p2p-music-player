@@ -60,6 +60,7 @@ endfunction()
 # and this will compile into an executable called test_lrc
 add_test(test_lrc "" tests/test_lrc.cpp util.cpp lrc.cpp)
 add_test(test_db SQLiteCpp tests/test_db.cpp store.cpp)
+add_test(test_queue "" tests/test_tsqueue.cpp tsqueue.h)
 
 # main executable
 # add source files here

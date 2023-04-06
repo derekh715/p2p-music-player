@@ -6,14 +6,14 @@
 #include <vector>
 
 struct Lyric {
-    unsigned int startms;  // only have start time in .lrc // CHANGED
+    unsigned int startms;  // only have start time in .lrc
     std::string s1;     // lyric with color
     char color = 0;     // 0:M, 1:F, 2:D
     std::string s2 = "";    // lyric without color
     bool operator < (const Lyric& b) const {
-        return startms < b.startms;// CHANGED
+        return startms < b.startms;
     }
-    unsigned int endms; // CHANGED
+    unsigned int endms;
 };
 
 class Lrc {

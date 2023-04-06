@@ -171,10 +171,13 @@ unsigned int Lrc::sTimetoms(std::string s) { // mm:ss.xx -> ms
 }
 
 std::string Lrc::removeSpace(std::string s) {
-    while (s.front() == ' ')
+    if (s.empty()) { return s; }
+    while (s.front() == ' ') {
         s.erase(0, 1);
-    while (s.back() == ' ')
+    }
+    while (s.back() == ' ') {
         s.pop_back();
+    }
     return s;
 }
 
