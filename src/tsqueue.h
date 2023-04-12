@@ -2,15 +2,21 @@
 #include <deque>
 #include <mutex>
 
-template <typename T>
-class ThreadSafeQueue {
-public:
-    const T& front() {
+/*
+ * A thread safe wrapper around the standard library deque
+ */
+template <typename T> class ThreadSafeQueue {
+  public:
+    ThreadSafeQueue() = default;
+    ThreadSafeQueue(const ThreadSafeQueue<T> &t) = delete;
+    ~ThreadSafeQueue() { q.clear(); }
+
+    const T &front() {
         std::scoped_lock l(mux);
         return q.front();
     }
 
-    const T& back() {
+    const T &back() {
         std::scoped_lock l(mux);
         return q.back();
     }
@@ -30,12 +36,12 @@ public:
         return rref;
     }
 
-    void push_back(const T& item) {
+    void push_back(const T &item) {
         std::scoped_lock l(mux);
         q.push_back(item);
     }
 
-    void push_front(const T& item) {
+    void push_front(const T &item) {
         std::scoped_lock l(mux);
         q.push_front(item);
     }
@@ -54,7 +60,8 @@ public:
         std::scoped_lock l(mux);
         return q.clear();
     }
-private:
+
+  private:
     std::mutex mux;
     std::deque<T> q;
 };

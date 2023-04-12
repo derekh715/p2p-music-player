@@ -22,6 +22,7 @@ pkg_check_modules(gstreamer-app REQUIRED IMPORTED_TARGET gstreamer-app-1.0>=1.4)
 pkg_check_modules(gstreamer-video REQUIRED IMPORTED_TARGET gstreamer-video-1.0>=1.4)
 pkg_check_modules(gstreamer-audio REQUIRED IMPORTED_TARGET gstreamer-audio-1.0>=1.4)
 pkg_check_modules(taglib REQUIRED IMPORTED_TARGET taglib)
+pkg_check_modules(asio REQUIRED IMPORTED_TARGET asio)
 
 # pull those libraries here and build them
 include(FetchContent)
@@ -66,7 +67,8 @@ add_test(test_queue "" tests/test_tsqueue.cpp tsqueue.h)
 # add source files here
 # p2pmss will be the executable that has the main function
 add_executable(p2pmss main.cpp util.cpp lrc.cpp store.cpp application.cpp
-  wav.cpp listfiles.cpp)
+  wav.cpp listfiles.cpp client.cpp)
+add_executable(network network-test.cpp client.cpp)
 # we link p2pmss with the necessary libraries like gtkmm4
 target_link_libraries(p2pmss PRIVATE
   PkgConfig::gtk3 SQLiteCpp
@@ -76,4 +78,6 @@ target_link_libraries(p2pmss PRIVATE
   PkgConfig::gstreamer-video
   PkgConfig::gstreamer-audio
   PkgConfig::taglib
+  PkgConfig::asio
 )
+target_link_libraries(network PRIVATE PkgConfig::asio)
