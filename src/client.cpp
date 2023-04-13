@@ -1,14 +1,11 @@
 #include "client.h"
 
-Client::Client(uint16_t port,
-               std::vector<std::tuple<std::string, std::string>> names)
-    : acceptor(ctx, tcp::endpoint(tcp::v4(), port)), resolver(ctx), timer(ctx),
-      names(names) {
+Client::Client(uint16_t port)
+    : acceptor(ctx, tcp::endpoint(tcp::v4(), port)), resolver(ctx), timer(ctx) {
     acceptor.set_option(tcp::acceptor::reuse_address(true));
     acceptor.listen();
     trap_signal();
     accept_socket();
-    connect_to_peers();
     cycle();
     worker = std::thread([this]() { ctx.run(); });
 }
@@ -37,8 +34,8 @@ void Client::trap_signal() {
 void Client::accept_socket() {
     acceptor.async_accept([&](asio::error_code const &ec, tcp::socket socket) {
         if (!ec) {
-            std::cout << "New session: " << socket.remote_endpoint()
-                      << std::endl;
+            std::cout << "[ACCEPT SOCKET] New session: "
+                      << socket.remote_endpoint() << std::endl;
             auto ptr = std::make_shared<tcp::socket>(std::move(socket));
             add_to_peers(std::shared_ptr<tcp::socket>(ptr));
             // connection is established, now we can wait
@@ -58,12 +55,6 @@ void Client::add_to_peers(std::shared_ptr<tcp::socket> socket) {
     current_id++;
 }
 
-void Client::connect_to_peers() {
-    for (auto &name : names) {
-        connect_to_peer(std::get<0>(name), std::get<1>(name));
-    }
-}
-
 void Client::connect_to_peer(std::string &host, std::string &service) {
     add_to_peers(std::make_shared<tcp::socket>(ctx));
     auto &p = peers[current_id - 1];
@@ -71,9 +62,11 @@ void Client::connect_to_peer(std::string &host, std::string &service) {
     asio::async_connect(*p, endpoints,
                         [&, spec = (host + ":"s + service)](
                             asio::error_code ec, tcp::endpoint endpoint) {
-                            std::cout << "For: " << spec << " " << ec.message();
+                            std::cout << "[CONNECT TO PEER] specified: " << spec
+                                      << " " << ec.message();
                             if (!ec) {
-                                std::cout << " " << p->remote_endpoint();
+                                std::cout << " actual: "
+                                          << p->remote_endpoint();
                                 // connection is established, now we can wait
                                 // for messages from that socket
                                 start_reading(p);
@@ -140,6 +133,22 @@ void Client::push_message(peer_id id, const Message &msg) {
     out_msgs.push_back({msg, id});
 }
 
+void Client::broadcast(const Message &msg) {
+    // loop through all the peers and send message
+    for (auto p : peers) {
+        push_message(p.first, msg);
+    }
+}
+
+std::vector<std::pair<peer_id, std::shared_ptr<tcp::socket>>>
+Client::get_sockets() {
+    std::vector<std::pair<peer_id, std::shared_ptr<tcp::socket>>> v;
+    for (auto p : peers) {
+        v.push_back(p);
+    }
+    return v;
+}
+
 void Client::remove_socket(peer_id id) {
     auto it = peers.find(id);
     if (it != peers.end()) {
@@ -167,7 +176,7 @@ void Client::remove_socket(std::shared_ptr<tcp::socket> socket) {
 }
 
 void Client::cycle() {
-    timer.expires_from_now(2s);
+    timer.expires_from_now(1s);
     timer.async_wait([&](asio::error_code ec) {
         if (ec) {
             std::cout << "[CYCLE] Something is wrong with the timer: "
@@ -264,15 +273,19 @@ void Client::write_body(std::shared_ptr<tcp::socket> socket) {
         });
 }
 
+// VERY IMPORTANT
+// this function parses the incoming messages!!!
+//
 void Client::handle_message(MessageWithOwner &t) {
-    // toy example, sending pings and pongs
     if (t.msg.header.type == MessageType::PING) {
         std::cout << "received PING from (" << t.id << ")" << std::endl;
+        // this one send a PONG response to that computer
         Message resp(MessageType::PONG);
         push_message(t.id, resp);
     } else if (t.msg.header.type == MessageType::PONG) {
         std::cout << "received PONG from (" << t.id << ")" << std::endl;
-        Message resp(MessageType::PING);
-        push_message(t.id, resp);
+        // uncomment this line to see they go back and forth indefinitely
+        // Message resp(MessageType::PING);
+        // push_message(t.id, resp);
     }
 }

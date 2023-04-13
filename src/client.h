@@ -19,20 +19,34 @@ typedef uint16_t peer_id;
 /*
  * This represents a client in the peer-to-peer network.
  * It needs a port (so that it can listen to other peers)
- * and names (the hostnames and ports of other peers)
  *
  * The constructor will start the cycle function (see below).
  */
 class Client {
   public:
-    Client(uint16_t port,
-           std::vector<std::tuple<std::string, std::string>> names);
+    Client(uint16_t port);
     ~Client();
 
     void push_message(peer_id id, const Message &msg);
 
     void remove_socket(peer_id id);
     void remove_socket(std::shared_ptr<tcp::socket> socket);
+
+    /*
+     * connect to a single peer, called by connect_to_peers
+     * the socket will be added to the peers list if successful
+     */
+    void connect_to_peer(std::string &host, std::string &service);
+
+    /*
+     * this sends a message to ALL clients
+     */
+    void broadcast(const Message &msg);
+
+    /*
+     * get all currently connected peer_id, socket pairs
+     */
+    std::vector<std::pair<peer_id, std::shared_ptr<tcp::socket>>> get_sockets();
 
   private:
     void accept_socket();
@@ -43,15 +57,6 @@ class Client {
      * so messages can be sent (unimplmented)
      */
     void cycle();
-    /*
-     * connect to all peers listed in names
-     */
-    void connect_to_peers();
-    /*
-     * connect to a single peer, called by connect_to_peers
-     * the socket will be added to the peers list if successful
-     */
-    void connect_to_peer(std::string &host, std::string &service);
     /*
      * what to do when exit signals are generated, like SIGNIT etc.
      */
@@ -101,8 +106,6 @@ class Client {
     tcp::resolver resolver;
     // the timeout function that calls cycle
     asio::high_resolution_timer timer;
-    // store the host port combinations in the constructor
-    std::vector<std::tuple<std::string, std::string>> names;
     // priming the context
     std::thread worker;
     // storing outgoing messages
