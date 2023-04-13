@@ -67,8 +67,8 @@ add_test(test_queue "" tests/test_tsqueue.cpp tsqueue.h)
 # add source files here
 # p2pmss will be the executable that has the main function
 add_executable(p2pmss main.cpp util.cpp lrc.cpp store.cpp application.cpp
-  wav.cpp listfiles.cpp client.cpp)
-add_executable(network network-test.cpp client.cpp)
+  wav.cpp listfiles.cpp client.cpp message.cpp)
+add_executable(network network-test.cpp client.cpp message.cpp util.cpp)
 # we link p2pmss with the necessary libraries like gtkmm4
 target_link_libraries(p2pmss PRIVATE
   PkgConfig::gtk3 SQLiteCpp

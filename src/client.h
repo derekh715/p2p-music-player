@@ -1,15 +1,20 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include "message.h"
+#include "tsqueue.h"
 #include <asio.hpp>
 #include <chrono>
 #include <iostream>
 #include <list>
+#include <map>
 #include <string_view>
 #include <tuple>
 
 using asio::ip::tcp;
 using namespace std::literals;
+
+typedef uint16_t peer_id;
 
 /*
  * This represents a client in the peer-to-peer network.
@@ -21,8 +26,12 @@ using namespace std::literals;
 class Client {
   public:
     Client(uint16_t port,
-           std::list<std::tuple<std::string, std::string>> names);
+           std::vector<std::tuple<std::string, std::string>> names);
     ~Client();
+
+    void push_message(peer_id id, const Message &msg);
+
+    void remove_socket(peer_id id);
 
   private:
     void accept_socket();
@@ -49,7 +58,8 @@ class Client {
     // this accepts incoming connections
     tcp::acceptor acceptor;
     // these hold the list of incoming and outgoing connections
-    std::list<tcp::socket> clients, peers;
+    // std::vector<tcp::socket> clients, peers;
+    std::map<peer_id, std::shared_ptr<tcp::socket>> peers;
     // resolves the hostname port to a valid endpoint
     tcp::resolver resolver;
     // the timeout function that calls cycle
@@ -57,9 +67,12 @@ class Client {
     // remove this later, this is just a send message example
     std::string const message = "testing\n";
     // store the host port combinations in the constructor
-    std::list<std::tuple<std::string, std::string>> names;
+    std::vector<std::tuple<std::string, std::string>> names;
     // priming the context
     std::thread worker;
+    // storing outgoing messages
+    ThreadSafeQueue<MessageWithOwner> out_messages;
+    peer_id current_id = 1;
 };
 
 #endif
