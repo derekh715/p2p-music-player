@@ -12,15 +12,15 @@ enum class MessageType : std::uint32_t {
     GET_TRACK_INFO,
     // respond to GET_TRACK_INFO
     NO_SUCH_TRACK,
-    TRACK_INFO
+    RETURN_TRACK_INFO
 };
 
 // the body of MessageType::GET_TRACK_INFO
 struct GetTrackInfo {
-    char title[100];
+    std::string title;
 };
 
-struct TrackInfo {
+struct ReturnTrackInfo {
     Track t;
 };
 
@@ -30,7 +30,7 @@ constexpr std::string_view get_message_name(MessageType mt) {
         case MessageType::PONG: return "PONG";
         case MessageType::GET_TRACK_INFO: return "GET_TRACK_INFO";
         case MessageType::NO_SUCH_TRACK: return "NO_SUCH_TRACK";
-        case MessageType::TRACK_INFO: return "TRACK_INFO";
+        case MessageType::RETURN_TRACK_INFO: return "RETURN_TRACK_INFO";
         default: return "???";
     }
 }

@@ -55,6 +55,7 @@ class Message {
 
     void reset();
 
+
     template <typename Data>
     friend Message &operator<<(Message &m, const Data &d) {
         static_assert(std::is_standard_layout<Data>::value,
@@ -73,6 +74,63 @@ class Message {
         std::memcpy(&d, m.body.data() + start, sizeof(Data));
         m.body.resize(start);
         m.header.size = m.size();
+        return m;
+    }
+
+    // specialized template for std::string
+
+    friend Message &operator<<(Message &m, const std::string &d) {
+        auto end = m.body.size();
+        auto len = d.size();
+        m.body.resize(end + len + sizeof(std::size_t));
+        m.header.size = m.size();
+        // write the string
+        std::memcpy(m.body.data() + end, d.data(), len);
+        // write the string size
+        std::memcpy(m.body.data() + end + len, &len, sizeof(std::size_t));
+        return m;
+    }
+
+    friend Message &operator>>(Message &m, std::string &d) {
+        auto start = m.size() - sizeof(std::size_t);
+        size_t len;
+        std::memcpy(&len, m.body.data() + start, sizeof(std::size_t));
+        d.insert(0, m.body.data() + start - len, len);
+        m.body.resize(start - len);
+        m.header.size = m.size();
+        return m;
+    }
+
+    // specialized template for track info
+    friend Message &operator<<(Message &m, const Track &d) {
+        m << d.id << d.album <<  d.artist << d.author << d.title << d.lrcfile << d.len;
+        return m;
+    }
+
+    friend Message &operator>>(Message &m, Track &d) {
+        m >> d.len >> d.lrcfile >> d.title >> d.author >> d.artist >> d.album >> d.id;
+        return m;
+    }
+
+    // specialized template for get track info struct
+    friend Message &operator<<(Message &m, const GetTrackInfo &d) {
+        m << d.title;
+        return m;
+    }
+
+    friend Message &operator>>(Message &m, GetTrackInfo &d) {
+        m >> d.title;
+        return m;
+    }
+
+    // specialized template for return track info struct
+    friend Message &operator<<(Message &m, const ReturnTrackInfo &d) {
+        m << d.t;
+        return m;
+    }
+
+    friend Message &operator>>(Message &m, ReturnTrackInfo &d) {
+        m >> d.t;
         return m;
     }
 

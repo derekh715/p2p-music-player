@@ -39,9 +39,9 @@ void Client::handle_message(MessageWithOwner &t) {
             std::cout << "peer (" << t.id << ") says he doesn't have such track." << std::endl;
             break;
         }
-        case MessageType::TRACK_INFO: {
+        case MessageType::RETURN_TRACK_INFO: {
             std::cout << "peer (" << t.id << ") has this track!" << std::endl;
-            TrackInfo ti;
+            ReturnTrackInfo ti;
             t.msg >> ti;
             // print the track info out
             std::cout << ti.t << std::endl;
@@ -51,7 +51,7 @@ void Client::handle_message(MessageWithOwner &t) {
             GetTrackInfo gti;
             t.msg >> gti;
             std::cout << "peer (" << t.id << ") asks for track: " << gti.title << std::endl;
-            if (std::strlen(gti.title) == 0) {
+            if (gti.title.empty()) {
                 std::cout << "The query is empty, returning no such track." << std::endl;
                 Message m(MessageType::NO_SUCH_TRACK);
                 push_message(t.id, m);
@@ -65,7 +65,7 @@ void Client::handle_message(MessageWithOwner &t) {
             } else {
                 std::cout << "Found it. Tell peer that I do have it." << std::endl;
                 // this is broken right now
-                Message m(MessageType::TRACK_INFO);
+                Message m(MessageType::RETURN_TRACK_INFO);
                 m << results[0];
                 push_message(t.id, m);
             }

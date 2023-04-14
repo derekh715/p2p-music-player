@@ -45,10 +45,8 @@ void get_track_info(Client &c) {
     GetTrackInfo g;
     std::cout << "Enter a track title to search" << std::endl;
     std::cin >> g.title;
-
-
     Message m(MessageType::GET_TRACK_INFO);
-    m << g; // push the struct into the message body
+    m << g.title; // push the struct into the message body
     // ask for everybody about that track
     c.broadcast(m);
 }
