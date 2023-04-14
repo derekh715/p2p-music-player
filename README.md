@@ -1,10 +1,10 @@
 # CSCI3280 Project
 
-## How does the Client classes work???
+## How do the Client classes work???
 
 The `BaseClient` constructor does a few things:
 
-1. Initialize the acceptor (it lets you accept connections) with that computers IP address and a designated port
+1. Initialize the acceptor (which accept connections) with that computers IP address and a designated port
 2. Start the acceptor
 3. `trap_signal` is supposed to trap SIGINT and SIGTERM, now it does nothing
 4. `accept_socket()` starts accepting connections
@@ -18,10 +18,10 @@ The `BaseClient` constructor does a few things:
    "callback". Asynchronous means that this function will probably be called
    AFTER `accept_socket` pops off the stack. (Magic)
 
-2. When it receives a connection, the token gives us a socket. Add that sockets
+2. When it receives a connection, the token gives us a socket. Add that socket
    to the `peers` array. (so we can use it later)
 
-3. Call `start_reading()` so that we can start reading from that socket
+3. Call `start_reading()` so we can start reading from that socket
 4. INSIDE the callback, we call `accept_socket` again!! (this is NOT a recursion
    since it is asynchronous!!).
 
@@ -31,8 +31,9 @@ others instead of others connecting to them.
 1. Make a socket and add it to the peers list
 2. Build a series of endpoints (the same host and service may correspond to
    multiple endpoints??)
-3. If none of the endpoints work, remove that socket
-4. If it works, then it works.
+3. Call `async_connect` with the endpoints
+4. If none of the endpoints work, remove that socket
+5. If it works, then it works.
 
 `start_reading`:
 
@@ -51,15 +52,15 @@ It first checks if there are any messages in `out_msgs`, if not it quits.
 
 1. It calls `async_write`, which tries to write to the socket
 2. First we write the header
-3. If there is no body, we quit (this time don't need to call `async_write`
+3. If body is empty, we quit (this time don't need to call `async_write`
    again, see `cycle` below)
-4. If there is body, call `write_body`
-5. `write_body` will write the body, then quit.
+4. If there is a body, call `write_body`
+5. `write_body` will write the bytes to the message body, then quit.
 
 `cycle`:
 
 The timer is `async_timer`, which runs the "token" (callback) every N seconds,
-now it is per one second.
+now the interval is one second.
 
 For each cycle, do the following:
 
@@ -76,19 +77,20 @@ A message contains a header and body.
 Header has two fields:
 
 1. `MessageType`: type of message
-2. `std::size_t`: size of body (zero if no body)
+2. `std::size_t`: size of body (zero if body is empty)
 
 Body is just a vector of char.
 
-Now there is a **huge** limitation of the `Message` class, there is no way you
-can push structs that have pointers, reference types in it. Everything is
-shallow copied.
+The push something into the message body, use `<<`. To pull something out of the
+message body, use `>>`. Note that the pushing is only a **shallow copy**. For
+arrays and strings, and other composite types, a custom operator overloading has
+to be provided for it to work correctly. See the `message.h` file for examples.
 
 The message that is sent in the client is actually a `MessageWithOwner`. It is
 nothing but message with a peer ID. Peer ID is a cleaner way to identify a peer
 without using host, port and so on.
 
-## So what is the difference between BaseClient and Client?
+## So what is the difference between `BaseClient` and `Client`?
 
 `BaseClient` dives into the details of reading and sending messages,
 establishing connections etc. For handling messages, please use the
