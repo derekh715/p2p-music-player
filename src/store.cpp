@@ -12,6 +12,17 @@ bool operator==(const Track &lhs, const Track &rhs) {
             lhs.lrcfile == rhs.lrcfile);
 }
 
+std::ostream& operator<<(std::ostream & os, const Track &t) {
+    os << "For track " << t.id << ":" <<
+        "\nTitle: " << t.title <<
+        "\nAlbum: " << t.album <<
+        "\nAuthor: " << t.author <<
+        "\nArtist: " << t.artist <<
+        "\nDuration: " << t.len <<
+        "\nLyric File" << t.lrcfile << std::endl;
+    return os;
+}
+
 Store::Store(bool drop_all, std::string filename)
     : db(filename, SQLite::OPEN_CREATE | SQLite::OPEN_READWRITE) {
     if (drop_all) {

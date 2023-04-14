@@ -3,13 +3,12 @@
 
 #include "util.h"
 #include <asio.hpp>
-#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <type_traits>
 #include <vector>
+#include "message-type.h"
 
-enum class MessageType : std::uint32_t { PING, PONG };
 
 /*
  * The header fields for every message that is sent in this application
@@ -49,27 +48,29 @@ class Message {
     Message(MessageType t);
     Message();
     std::size_t size() const;
-    std::vector<uint8_t> body;
+    std::vector<char> body;
 
     // mainly for debugging
-    friend std::ostream &operator<<(std::ostream &os, Message &m);
+    friend std::ostream &operator<<(std::ostream &os, const Message &m);
+
+    void reset();
 
     template <typename Data>
     friend Message &operator<<(Message &m, const Data &d) {
         static_assert(std::is_standard_layout<Data>::value,
                       "This data type cannot be serialized");
-        auto end = m.size();
-        m.body.resize(end + sizeof(d));
+        auto end = m.body.size();
+        m.body.resize(end + sizeof(Data));
         m.header.size = m.size();
-        std::memcpy(m.body.data() + end, &d, sizeof(d));
+        std::memcpy(m.body.data() + end, &d, sizeof(Data));
         return m;
     }
 
     template <typename Data> friend Message &operator>>(Message &m, Data &d) {
         static_assert(std::is_standard_layout<Data>::value,
                       "This data type cannot be deserialized");
-        auto start = m.size() - sizeof(d);
-        std::memcpy(&d, m.body.data() + start, sizeof(d));
+        auto start = m.size() - sizeof(Data);
+        std::memcpy(&d, m.body.data() + start, sizeof(Data));
         m.body.resize(start);
         m.header.size = m.size();
         return m;

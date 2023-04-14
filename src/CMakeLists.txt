@@ -30,6 +30,7 @@ include(FetchContent)
 FetchContent_Declare(SQLiteCpp
   GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp
 )
+
 # adding testing framework
 FetchContent_Declare(googletest
   GIT_REPOSITORY https://github.com/google/googletest
@@ -67,11 +68,13 @@ add_test(test_queue "" tests/test_tsqueue.cpp tsqueue.h)
 # add source files here
 # p2pmss will be the executable that has the main function
 add_executable(p2pmss main.cpp util.cpp lrc.cpp store.cpp application.cpp
-  wav.cpp listfiles.cpp client.cpp message.cpp)
-add_executable(network network-test.cpp client.cpp message.cpp util.cpp)
+  wav.cpp listfiles.cpp client.cpp base-client.cpp message.cpp)
+add_executable(network network-example.cpp client.cpp message.cpp util.cpp
+  base-client.cpp store.cpp)
 # we link p2pmss with the necessary libraries like gtkmm4
 target_link_libraries(p2pmss PRIVATE
-  PkgConfig::gtk3 SQLiteCpp
+  SQLiteCpp
+  PkgConfig::gtk3
   PkgConfig::gstreamer
   PkgConfig::gstreamer-sdp
   PkgConfig::gstreamer-app
@@ -80,4 +83,4 @@ target_link_libraries(p2pmss PRIVATE
   PkgConfig::taglib
   PkgConfig::asio
 )
-target_link_libraries(network PRIVATE PkgConfig::asio)
+target_link_libraries(network PRIVATE PkgConfig::asio SQLiteCpp)

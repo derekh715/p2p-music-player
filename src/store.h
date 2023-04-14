@@ -28,6 +28,7 @@ struct Track {
     // == can determine if the two track files are the "same"
     // "same" means all fields equal
     friend bool operator==(const Track &lhs, const Track &rhs);
+    friend std::ostream& operator<<(std::ostream & os, const Track &t);
 };
 
 /*
