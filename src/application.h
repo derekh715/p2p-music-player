@@ -63,6 +63,9 @@ public:
     GstElement* appsrc;
     GstBuffer* buffer;
     GstStreamVolume* volume;
+    
+    GstElement *bin, *spectrum, *sink;
+    GstPad *pad, *ghost_pad;
 
 protected:
     void on_activate() override;
@@ -270,6 +273,13 @@ private:
     void on_ButtonDialog2Cancel_clicked();
     void on_ButtonDialog2Save_clicked();
 
+    Gtk::DrawingArea* pDrawingArea1 = nullptr;
+    bool done_draw = true;
+    const guint spect_bands = 128;
+    std::vector<double> magnitudes = std::vector<double>(spect_bands*5, -60);
+    bool on_DrawingArea1_draw(const Cairo::RefPtr<Cairo::Context>& cr, const GdkEventExpose* event);
+    void update_spectrum_data(const GstStructure *s);
+    
     Glib::ustring PrettyString(const Glib::ustring& str, const int MaxLength);
 };
 
