@@ -17,9 +17,8 @@ TEST(db_test, insert_single_track_works) {
     // some random info
     Track t = {.album = "Try to Remember",
                .artist = "The Brothers Four",
-               .author = "The Brothers Four",
                .title = "Jamaica Farewell",
-               .len = (120 + 55) * 1000};
+               .duration = (120 + 55) * 1000};
     bool success = s.create(t);
     EXPECT_THAT(success, Eq(true)); // it is really inserted into the database
 
@@ -36,14 +35,14 @@ TEST(db_test, get_multiple_tracks) {
     Store s(true, ":memory:");
     for (int i = 0; i < size; i++) {
         Track t;
-        t.len = i;
+        t.duration = i;
         s.create(t);
     }
 
     std::vector<Track> vec = s.read_all();
     EXPECT_THAT(vec.size(), size);
     for (int i = 0; i < size; i++) {
-        EXPECT_THAT(vec[i].len, i);
+        EXPECT_THAT(vec[i].duration, i);
     }
 }
 
@@ -59,7 +58,7 @@ TEST(db_test, remove_one_from_database_leaves_n_minus_1) {
     const int size = 20;
     for (int i = 0; i < size; i++) {
         Track t;
-        t.len = i;
+        t.duration = i;
         s.create(t);
     }
     // now the database is not empty, this should work
@@ -86,9 +85,8 @@ TEST(db_test, update_track_works) {
         .id = 1,
         .album = "Try to Remember",
         .artist = "The Brothers Four",
-        .author = "The Brothers Four",
         .title = "Jamaica Farewell",
-        .len = (120 + 55) * 1000,
+        .duration = (120 + 55) * 1000,
     };
     s.create(t);
     t.album = "Try to NOT Remember";
@@ -105,7 +103,7 @@ TEST(db_test, adding_invalid_lrc_file_path) {
     Track t = {
         .lrcfile = "notexist.lrc",
     };
-    bool success = s.create(t);
+    bool success = s.create(t, true);
     EXPECT_THAT(success, Eq(false));
 }
 
@@ -132,9 +130,8 @@ TEST(db_test, matches_one_or_more) {
         .id = 1,
         .album = "Try to Forget",
         .artist = "The Brothers Five",
-        .author = "The Brothers Five",
         .title = "Try to Forget",
-        .len = (120 + 55) * 1000,
+        .duration = (120 + 55) * 1000,
     };
     s.create(t);
     auto entries = s.search("five");

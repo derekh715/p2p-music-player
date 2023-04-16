@@ -9,12 +9,12 @@ void Client::populate_tracks() {
             .album = "Example Album",
             .artist = "Example Author",
             .title = "Example Title",
-            .len = 3500};
+            .duration = 3500};
     Track t1{.id = 4,
              .album = "Another Example Album",
              .artist = "Another Example Author",
              .title = "Another Example Title",
-             .len = 3500};
+             .duration = 3500};
     s.create(t);
     s.create(t1);
 }

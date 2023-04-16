@@ -38,10 +38,8 @@ TEST(test_msg, pushing_and_pulling_struct_with_string) {
         .id = 11,
         .album = "Test Album",
         .artist = "Artist 1",
-        .author = "It is fine",
         .title = "Title",
         .lrcfile = "random path",
-        .len = 13313,
     };
     Message m;
     m << expect;

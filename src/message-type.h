@@ -1,5 +1,5 @@
 #include "lrc.h"
-#include "store-type.h"
+#include "store-types.h"
 #include <cstdint>
 #include <string>
 #include <vector>

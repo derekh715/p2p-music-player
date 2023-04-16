@@ -41,14 +41,14 @@ Message &operator>>(Message &m, std::string &d) {
 }
 
 Message &operator<<(Message &m, const Track &d) {
-    m << d.id << d.album << d.artist << d.author << d.title << d.lrcfile
-      << d.len;
+    m << d.id << d.album << d.artist << d.title << d.lrcfile << d.path
+      << d.duration << d.checksum << d.filesize;
     return m;
 }
 
 Message &operator>>(Message &m, Track &d) {
-    m >> d.len >> d.lrcfile >> d.title >> d.author >> d.artist >> d.album >>
-        d.id;
+    m >> d.filesize >> d.checksum >> d.duration >> d.path >> d.lrcfile >>
+        d.title >> d.artist >> d.album >> d.id;
     return m;
 }
 

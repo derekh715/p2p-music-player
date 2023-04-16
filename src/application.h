@@ -1,3 +1,4 @@
+// clang-format off
 // CSCI3280 Phase 1
 // Thomas
 
@@ -63,7 +64,7 @@ public:
     GstElement* appsrc;
     GstBuffer* buffer;
     GstStreamVolume* volume;
-    
+
     GstElement *bin, *spectrum, *sink;
     GstPad *pad, *ghost_pad;
 
@@ -279,7 +280,7 @@ private:
     std::vector<double> magnitudes = std::vector<double>(spect_bands*5, -60);
     bool on_DrawingArea1_draw(const Cairo::RefPtr<Cairo::Context>& cr, const GdkEventExpose* event);
     void update_spectrum_data(const GstStructure *s);
-    
+
     Glib::ustring PrettyString(const Glib::ustring& str, const int MaxLength);
 };
 

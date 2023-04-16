@@ -1,7 +1,7 @@
 #ifndef STORE_H
 #define STORE_H
 
-#include "store-type.h"
+#include "store-types.h"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <iostream>
 #include <vector>
@@ -34,7 +34,9 @@ class Store {
 
     // add one track into the database
     // return value indicates if it is successful or not
-    bool create(Track &t);
+    bool create(Track &t, bool strict = false);
+
+    // bool create_from_music_info(MusicInfoCDT &m);
 
     // get one track from the database
     // return value:
@@ -50,7 +52,7 @@ class Store {
 
     // update one track
     // return a boolean indicating if it is successful or not
-    bool update(int id, Track &t);
+    bool update(int id, Track &t, bool strict = false);
 
     // delete one track (can't use the word delete in C++)
     // return a boolean indicating if it is successful or not
