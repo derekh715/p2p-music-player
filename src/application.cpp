@@ -209,6 +209,8 @@ Gtk::ApplicationWindow* MyApplication::create_appwindow()
     pLabelFileName1->property_xalign() = 0;
     pLabelFileName1->set_max_width_chars(400);
 
+    refBuilder->get_widget("DrawingArea1", pDrawingArea1);
+    pDrawingArea1->signal_draw().connect([this](const Cairo::RefPtr<Cairo::Context>& cr) -> bool { return on_DrawingArea1_draw(cr, nullptr);});
 
     refBuilder->get_widget("Label1", pLabel1);
     refBuilder->get_widget("Label2", pLabel2);
@@ -323,7 +325,7 @@ Gtk::ApplicationWindow* MyApplication::create_appwindow()
     add_window(*pApplicationWindow1);
     pApplicationWindow1->show_all_children();
 
-    Glib::signal_timeout().connect(sigc::mem_fun(*this, &MyApplication::timeout1), 50, Glib::PRIORITY_HIGH_IDLE);
+    Glib::signal_timeout().connect(sigc::mem_fun(*this, &MyApplication::timeout1), 25, Glib::PRIORITY_HIGH_IDLE);
     pApplicationWindow1->signal_hide().connect(sigc::bind<Gtk::ApplicationWindow*>(sigc::mem_fun(*this, &MyApplication::on_hide_window), pApplicationWindow1));
     pMessageDialog1->signal_response().connect(sigc::mem_fun(*this, &MyApplication::on_MessageDialog1_response));
     pButtonDialog1Cancel->signal_clicked().connect(sigc::mem_fun(*this, &MyApplication::on_ButtonDialog1Cancel_clicked));
@@ -788,6 +790,30 @@ void MyApplication::LoadMusic() {
     if (CurrentMusic->Extension != ".wav" || !CurrentMusic->CanonicalWAV) {
         Glib::ustring command = "playbin uri=\"file:///" + CurrentMusic->FilePath + "\"";
         pipeline = gst_parse_launch(command.c_str(), NULL);
+        
+        spectrum = gst_element_factory_make ("spectrum", "spectrum");
+        sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
+        if (!spectrum || !sink) {
+            g_printerr ("Not all elements could be created.\n");
+        }
+        
+        bin = gst_bin_new ("audio_sink_bin");
+        gst_bin_add_many (GST_BIN (bin), spectrum, sink, NULL);
+        gst_element_link_many (spectrum, sink, NULL);
+
+        pad = gst_element_get_static_pad (spectrum, "sink");
+        ghost_pad = gst_ghost_pad_new ("sink", pad);
+        gst_pad_set_active (ghost_pad, TRUE);
+        gst_element_add_pad (bin, ghost_pad);
+        gst_object_unref (pad);
+
+        g_object_set (G_OBJECT (spectrum), "bands", 128, "interval", 50000000, NULL);
+
+        g_object_set (GST_OBJECT (pipeline), "audio-sink", bin, NULL);
+        
+        char *cwd = getcwd(cwd, 0); // ???
+        
+        // if(false) Glib::setenv("", NULL, 0); // ???
     }
 }
 
@@ -875,7 +901,7 @@ void MyApplication::PlayMusic() {
 
         }
         else {
-            std::string command = "appsrc name=src ! rawaudioparse  format=pcm num-channels=" + std::to_string(wav->getNumChannels()) + " sample-rate=" + std::to_string(wav->getSampleRate()) + " pcm-format=GST_AUDIO_FORMAT_S" + std::to_string(wav->getBitsPerSample()) + "LE ! volume name=vol ! level ! audioconvert ! audioresample ! autoaudiosink  --gst-debug=2";
+            std::string command = "appsrc name=src ! rawaudioparse  format=pcm num-channels=" + std::to_string(wav->getNumChannels()) + " sample-rate=" + std::to_string(wav->getSampleRate()) + " pcm-format=GST_AUDIO_FORMAT_S" + std::to_string(wav->getBitsPerSample()) + "LE ! volume name=vol ! level ! audioconvert ! audioresample ! spectrum interval=50000000 bands=128 ! autoaudiosink  --gst-debug=2";
             pipeline = gst_parse_launch(command.c_str(), NULL);
             appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "src");
             volume = (GstStreamVolume*)gst_bin_get_by_name(GST_BIN(pipeline), "vol");
@@ -1047,21 +1073,25 @@ bool MyApplication::timeout1() {
             GstVolumeChanged = false;
         }
         msg = gst_bus_timed_pop_filtered(bus, 0 * GST_MSECOND,
-            GstMessageType(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-        if (msg != NULL) {
-            switch (GST_MESSAGE_TYPE(msg)) {
-            case GST_MESSAGE_EOS:
-                if (PlayMode == SINGLE) {
-                    PauseMusic();
-                    pAdjustment1->set_value(0);
-                }
-                else
-                    on_ButtonNext1_clicked();
-                break;
+            GstMessageType(GST_MESSAGE_ERROR | GST_MESSAGE_EOS | GST_MESSAGE_ELEMENT));
+        if (msg != NULL && GST_MESSAGE_TYPE(msg) == GST_MESSAGE_EOS) {
+            if (PlayMode == SINGLE) {
+                PauseMusic();
+                pAdjustment1->set_value(0);
             }
+            else
+                on_ButtonNext1_clicked();
             gst_message_unref(msg);
         }
         else {
+            if(msg != NULL && GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ELEMENT){
+                const GstStructure *s = gst_message_get_structure (msg);
+                update_spectrum_data(s); 
+                gst_message_unref(msg);
+            }
+            else if(msg != NULL)
+                gst_message_unref(msg);
+            
             gst_element_query_position(pipeline, GST_FORMAT_TIME, &CurrentPosInMilliseconds);
             CurrentPosInMilliseconds /= 1000000;
             pLabel1->set_text(TimeString(PlayedInMilliseconds + CurrentPosInMilliseconds));
@@ -1295,6 +1325,91 @@ bool MyApplication::on_EntryCompletion1_match_selected(const Gtk::TreeModel::con
         return true;
     }
     return false;
+}
+
+void MyApplication::update_spectrum_data(const GstStructure *s) {
+    const gchar *name = gst_structure_get_name (s);
+    if (strcmp (name, "spectrum") != 0)
+        return; 
+
+    const GValue *magnitudes_value = gst_structure_get_value(s, "magnitude");
+
+    bool changed = false;
+
+    for (guint i = 0; i < spect_bands; ++i) {
+        const GValue *mag = gst_value_list_get_value(magnitudes_value, i);
+
+        if (mag != NULL || changed) {
+            magnitudes.push_back(g_value_get_float(mag));
+            if(!changed){
+                changed = true;
+                magnitudes.erase(magnitudes.begin(), magnitudes.begin() + spect_bands);
+            }
+        } else {
+            magnitudes.push_back(-60);
+        }
+    }
+
+    // if(changed && !done_draw){
+    //     std::cout << "droped\n";
+    // }
+    if(changed && done_draw){
+        done_draw = false;
+        pDrawingArea1->queue_draw();
+    }
+
+}
+
+bool MyApplication::on_DrawingArea1_draw(const Cairo::RefPtr<Cairo::Context>& cr, const GdkEventExpose* event) {
+
+    // Get the dimensions of the drawing area widget
+    int width = pDrawingArea1->Gtk::Widget::get_allocated_width();
+    int height = pDrawingArea1->Gtk::Widget::get_allocated_height();
+
+    // Set the background color to white
+    cr->set_source_rgb(1.0, 1.0, 1.0);
+    cr->rectangle(0, 0, width, height);
+    cr->fill();
+
+    // random color
+    static double r = 0.5, g = 0.5, b = 0.5;
+    r += 0.1*((double)rand()/RAND_MAX-0.5);
+    g += 0.1*((double)rand()/RAND_MAX-0.5);
+    b += 0.1*((double)rand()/RAND_MAX-0.5);
+    r = r<0.1?0.1:(r>0.9?0.9:r);
+    g = g<0.1?0.1:(g>0.9?0.9:g);
+    b = b<0.1?0.1:(b>0.9?0.9:b);
+    cr->set_source_rgb(r, g, b);
+
+    std::vector<double> value;
+    for (guint i = 0; i < spect_bands; ++i) {
+        double v = 0;
+        for (int j = 0; j<5; j++)
+            v += magnitudes[i+((4-j)*spect_bands)]/(j*2+1);
+        v /= 1.0 + 1.0/3 + 1.0/5 + 1.0/7 + 1.0/9;
+        v += 60;
+        value.push_back(v);
+    }
+    
+    for (int i = 0; i < spect_bands; i+=4) {
+        double avg;
+        if(i+3< spect_bands)
+            avg = (value[i]+value[i+1]+value[i+2]+value[i+3])/4;
+        else
+            avg = value[i];
+        value.insert(value.begin(),avg);
+    }
+    
+    for (int i = 0; i < value.size(); ++i) {
+        cr->rectangle((int)i * round((double)width / value.size()), height / 2.0 - round(value[i]) * height / 100.0,
+                        (int)round((double)width / value.size()), (round(value[i]) * height / 50.0)==0?1:(round(value[i]) * height / 50.0));
+        cr->fill();
+    }
+
+    cr->stroke();
+
+    done_draw = true;
+    return true;
 }
 
 Glib::ustring MyApplication::PrettyString(const Glib::ustring& str, const int MaxLength) {
