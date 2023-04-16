@@ -93,11 +93,11 @@ void BaseClient::start_reading(std::shared_ptr<tcp::socket> socket) {
                          // check if the message contains a body, if yes, read
                          // it if not just add the message to the queue
                          std::cout << temp_msg << std::endl;
-                             std::cout
-                                 << "[READ HEADER] Read "
-                                 << len << " bytes from peer." << std::endl;
+                         std::cout << "[READ HEADER] Read " << len
+                                   << " bytes from peer." << std::endl;
                          if (temp_msg.header.size > 0) {
-                             std::cout << "[READ HEADER] Still has body to read" << std::endl;
+                             std::cout << "[READ HEADER] Still has body to read"
+                                       << std::endl;
                              temp_msg.body.resize(temp_msg.header.size);
                              read_body(socket);
                          } else {
@@ -118,8 +118,8 @@ void BaseClient::read_body(std::shared_ptr<tcp::socket> socket) {
                              remove_socket(socket);
                              return;
                          }
-                             std::cout << "[READ BODY] Read : "
-                                       << len << "bytes from peer" << std::endl;
+                         std::cout << "[READ BODY] Read : " << len
+                                   << " bytes from peer" << std::endl;
                          add_to_incoming(socket);
                      });
 }
@@ -239,7 +239,8 @@ void BaseClient::start_writing() {
                 std::cout << "[START WRITING] Finish writing header that is "
                           << len << " bytes " << std::endl;
                 if (out_msgs.front().msg.header.size > 0) {
-                    std::cout << "[START WRITING] Still has body to write." << std::endl;
+                    std::cout << "[START WRITING] Still has body to write."
+                              << std::endl;
                     write_body(socket);
                     return;
                 }

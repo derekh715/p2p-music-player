@@ -1,14 +1,13 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
+#include "message-type.h"
 #include "util.h"
 #include <asio.hpp>
 #include <cstring>
 #include <iostream>
 #include <type_traits>
 #include <vector>
-#include "message-type.h"
-
 
 /*
  * The header fields for every message that is sent in this application
@@ -55,7 +54,6 @@ class Message {
 
     void reset();
 
-
     template <typename Data>
     friend Message &operator<<(Message &m, const Data &d) {
         static_assert(std::is_standard_layout<Data>::value,
@@ -77,62 +75,73 @@ class Message {
         return m;
     }
 
+    // specialized template for std::vector
+    template <typename V>
+    friend Message &operator<<(Message &m, const std::vector<V> &d) {
+        for (auto &item : d) {
+            m << item;
+        }
+        // also write the size
+        m << d.size();
+        return m;
+    }
+
+    template <typename V>
+    friend Message &operator>>(Message &m, std::vector<V> &d) {
+        std::size_t size;
+        m >> size;
+        d.resize(size);
+        // there is nothing to push into the vector
+        if (size == 0) {
+            return m;
+        }
+        for (int i = size - 1; i >= 0; i--) {
+            V item;
+            m >> item;
+            d[i] = item;
+        }
+        return m;
+    }
+
     // specialized template for std::string
-
-    friend Message &operator<<(Message &m, const std::string &d) {
-        auto end = m.body.size();
-        auto len = d.size();
-        m.body.resize(end + len + sizeof(std::size_t));
-        m.header.size = m.size();
-        // write the string
-        std::memcpy(m.body.data() + end, d.data(), len);
-        // write the string size
-        std::memcpy(m.body.data() + end + len, &len, sizeof(std::size_t));
-        return m;
-    }
-
-    friend Message &operator>>(Message &m, std::string &d) {
-        auto start = m.size() - sizeof(std::size_t);
-        size_t len;
-        std::memcpy(&len, m.body.data() + start, sizeof(std::size_t));
-        d.insert(0, m.body.data() + start - len, len);
-        m.body.resize(start - len);
-        m.header.size = m.size();
-        return m;
-    }
+    friend Message &operator<<(Message &m, const std::string &d);
+    friend Message &operator>>(Message &m, std::string &d);
 
     // specialized template for track info
-    friend Message &operator<<(Message &m, const Track &d) {
-        m << d.id << d.album <<  d.artist << d.author << d.title << d.lrcfile << d.len;
-        return m;
-    }
-
-    friend Message &operator>>(Message &m, Track &d) {
-        m >> d.len >> d.lrcfile >> d.title >> d.author >> d.artist >> d.album >> d.id;
-        return m;
-    }
+    friend Message &operator<<(Message &m, const Track &d);
+    friend Message &operator>>(Message &m, Track &d);
 
     // specialized template for get track info struct
-    friend Message &operator<<(Message &m, const GetTrackInfo &d) {
-        m << d.title;
-        return m;
-    }
-
-    friend Message &operator>>(Message &m, GetTrackInfo &d) {
-        m >> d.title;
-        return m;
-    }
+    friend Message &operator<<(Message &m, const GetTrackInfo &d);
+    friend Message &operator>>(Message &m, GetTrackInfo &d);
 
     // specialized template for return track info struct
-    friend Message &operator<<(Message &m, const ReturnTrackInfo &d) {
-        m << d.t;
-        return m;
-    }
+    friend Message &operator<<(Message &m, const ReturnTrackInfo &d);
+    friend Message &operator>>(Message &m, ReturnTrackInfo &d);
 
-    friend Message &operator>>(Message &m, ReturnTrackInfo &d) {
-        m >> d.t;
-        return m;
-    }
+    // specialized template for get lyrics struct
+    friend Message &operator<<(Message &m, const GetLyrics &d);
+    friend Message &operator>>(Message &m, GetLyrics &d);
+
+    // specialized template for return lyrics info struct
+    friend Message &operator<<(Message &m, const ReturnLyrics &d);
+    friend Message &operator>>(Message &m, ReturnLyrics &d);
+
+    // specialized template for lyrics struct
+    friend Message &operator<<(Message &m, const Lyric &d);
+    friend Message &operator>>(Message &m, Lyric &d);
+
+    // specialized template for LRC struct
+    friend Message &operator<<(Message &m, const Lrc &d);
+    friend Message &operator>>(Message &m, Lrc &d);
+
+    // specialized template for no such track
+    friend Message &operator<<(Message &m, const NoSuchTrack &d);
+    friend Message &operator>>(Message &m, NoSuchTrack &d);
+
+    // specialized template for no such lyrics
+    friend Message &operator<<(Message &m, const NoSuchLyrics &d);
+    friend Message &operator>>(Message &m, NoSuchLyrics &d);
 
     MessageHeader header;
 };

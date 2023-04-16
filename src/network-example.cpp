@@ -46,8 +46,18 @@ void get_track_info(Client &c) {
     std::cout << "Enter a track title to search" << std::endl;
     std::cin >> g.title;
     Message m(MessageType::GET_TRACK_INFO);
-    m << g.title; // push the struct into the message body
+    m << g; // push the struct into the message body
     // ask for everybody about that track
+    c.broadcast(m);
+}
+
+void get_lyrics_file(Client &c) {
+    GetLyrics l;
+    std::cout << "Enter a lrc filepath to get the lyrics: " << std::endl;
+    std::cin >> l.filename;
+    Message m(MessageType::GET_LYRICS);
+    m << l;
+    // maybe it is better to ask users that have that file than everyone
     c.broadcast(m);
 }
 
@@ -68,8 +78,8 @@ int main(int argc, char **argv) {
                   << "B) Ping a machine with peer_id\n"
                   << "C) Ping all machines\n"
                   << "D) Print all connected peers\n"
-                  << "E) Ask for track"
-                  << std::endl;
+                  << "E) Ask for track\n"
+                  << "F) Ask for lyrics" << std::endl;
         char c;
         std::cin >> c;
         if (c == EOF) {
@@ -95,6 +105,9 @@ int main(int argc, char **argv) {
             break;
         case 'E':
             get_track_info(cl);
+            break;
+        case 'F':
+            get_lyrics_file(cl);
             break;
         default:
             std::cout << "Unknown option! Please try again" << std::endl;

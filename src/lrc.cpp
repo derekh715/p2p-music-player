@@ -1,11 +1,10 @@
 #include "lrc.h"
 #include "util.h"
-#include <fstream>
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 
-Lrc::Lrc(const char* path) {
-    // init
+void Lrc::init() {
     album = "";
     artist = "";
     author = "";
@@ -17,8 +16,16 @@ Lrc::Lrc(const char* path) {
     version = "";
     failure = false; // assume the file works first
     lys.clear();
-    lys.push_back({ 0, "" }); // no lyric since 0 ms
+    lys.push_back({0, ""}); // no lyric since 0 ms
+}
 
+Lrc::Lrc() {
+    init();
+    // don't read anything since there is no file path
+}
+
+Lrc::Lrc(const char *path) {
+    init();
     std::ifstream fin(path);
     // if the file failed to load quit early
     if (!fin) {
@@ -39,18 +46,32 @@ Lrc::Lrc(const char* path) {
         // header
         std::string substring = s.substr(pos + 1, s.rfind("]") - pos - 1);
         switch (s.at(pos - 1)) {
-        case 'l': album = substring; break;     // al
-        case 'r': artist = substring; break;    // ar
-        case 'u': author = substring; break;    // au
-        case 'i': title = substring; break;     // ti
-        case 'h': length = substring; break;    // length
-        case 'y': creator = substring; break;   // by
-        case 't': offset = std::stoi(substring); break; // offset
+        case 'l':
+            album = substring;
+            break; // al
+        case 'r':
+            artist = substring;
+            break; // ar
+        case 'u':
+            author = substring;
+            break; // au
+        case 'i':
+            title = substring;
+            break; // ti
+        case 'h':
+            length = substring;
+            break; // length
+        case 'y':
+            creator = substring;
+            break; // by
+        case 't':
+            offset = std::stoi(substring);
+            break; // offset
         case 'e':
             if (s.at(pos - 1) == 'r')
-                editor = substring;     // re
+                editor = substring; // re
             else
-                version = substring;    // ve
+                version = substring; // ve
             break;
         }
 
@@ -61,37 +82,36 @@ Lrc::Lrc(const char* path) {
         // extract (maybe multiple) [timestamp]
         std::vector<std::string> time(0);
         int openPos = s.find("[");
-        while (openPos != -1) {       // !=-1 -> have pos for "["
+        while (openPos != -1) {         // !=-1 -> have pos for "["
             int closePos = s.find("]"); // assume "[", "]" are in pairs
             time.push_back(s.substr(openPos + 1, closePos - openPos - 1));
             if (closePos + 1 < s.size()) {
                 s = removeSpace(s.substr(closePos + 1));
-            }
-            else   // if no char after ']'
+            } else // if no char after ']'
                 s = "";
             openPos = s.find("[");
-        }   // e.g. s: [] D: ?<>?<>? => D: ?<>?<>?
+        } // e.g. s: [] D: ?<>?<>? => D: ?<>?<>?
 
         // Simple format extended (color: M, F, D)
         char color;
         if (s.length() >= 3 && s[1] == ':' && s[2] == ' ') {
             switch (s[0]) {
-            case 'M':       // "M: "
+            case 'M': // "M: "
                 color = 0;
                 s = s.substr(3);
                 break;
-            case 'F':       // "F: "
+            case 'F': // "F: "
                 color = 1;
                 s = s.substr(3);
                 break;
-            case 'D':       // "D: "
+            case 'D': // "D: "
                 color = 2;
                 s = s.substr(3);
                 break;
-            default: color = lys.back().color;  // "?: "
-            }   // e.g. s: D: ?<>?<>? => ?<>?<>?
-        }
-        else   // doesn't have "M: " etc.
+            default:
+                color = lys.back().color; // "?: "
+            }                             // e.g. s: D: ?<>?<>? => ?<>?<>?
+        } else                            // doesn't have "M: " etc.
             color = lys.back().color;
 
         // not Enhanced LRC format -> process each timestamp -> next line
@@ -100,28 +120,27 @@ Lrc::Lrc(const char* path) {
             for (int i = 0; i < time.size(); i++) {
                 unsigned int ms = sTimetoms(time[i]);
                 if (ms >= 0)
-                    lys.push_back({ ms, s, color });
+                    lys.push_back({ms, s, color});
                 else
                     continue;
             }
-            continue;   // next line;
+            continue; // next line;
         }
 
         // Enhanced LRC (assume only one [timestamp])
         // split <timestamp> and word
-        openPos = s.find("<");  //?<>?<>?
+        openPos = s.find("<"); //?<>?<>?
         std::vector<std::string> words(0);
         while (openPos != -1) {
             words.push_back(removeSpace(s.substr(0, openPos)));
-            s = s.substr(openPos);  //<>?<>?
-            openPos = s.find("<");  // update openPos after shorten s
+            s = s.substr(openPos); //<>?<>?
+            openPos = s.find("<"); // update openPos after shorten s
             int closePos = s.find(">");
             time.push_back(s.substr(openPos + 1, closePos - openPos - 1));
             if (closePos + 1 < s.size()) {
                 s = removeSpace(s.substr(closePos + 1));
-            }
-            else   // if no char after '>'
-                s = "";             //?<>?
+            } else      // if no char after '>'
+                s = ""; //?<>?
             openPos = s.find("<");
         }
         words.push_back(removeSpace(s));
@@ -136,7 +155,7 @@ Lrc::Lrc(const char* path) {
                     s1 += words[j] + (j == words.size() - 1 ? "" : " ");
                 else
                     s2 += words[j] + (j == words.size() - 1 ? "" : " ");
-            lys.push_back({ ms, s1, color, s2 });
+            lys.push_back({ms, s1, color, s2});
         }
         // lys.back().s1 += '\0';
     }
@@ -144,14 +163,15 @@ Lrc::Lrc(const char* path) {
 
     std::stable_sort(lys.begin(), lys.end());
 
-    for (int i = 1; i < lys.size(); i++) // lys[0] is empty
-        if ((lys[i].startms + offset) >= 0)  // in case resulted ms<0
+    for (int i = 1; i < lys.size(); i++)    // lys[0] is empty
+        if ((lys[i].startms + offset) >= 0) // in case resulted ms<0
             lys[i].startms += offset;
         else
             lys[i].startms = 0;
 
     // for(int i=0; i<lys.size(); i++)
-    //     printf("%d %s %d %s\n",lys[i].ms, lys[i].s1.c_str(), lys[i].color, lys[i].s2.c_str());
+    //     printf("%d %s %d %s\n",lys[i].ms, lys[i].s1.c_str(), lys[i].color,
+    //     lys[i].s2.c_str());
 
     for (int i = 0; i < lys.size() - 1; i++) // CHANGED
         lys[i].endms = lys[i + 1].startms;
@@ -171,7 +191,9 @@ unsigned int Lrc::sTimetoms(std::string s) { // mm:ss.xx -> ms
 }
 
 std::string Lrc::removeSpace(std::string s) {
-    if (s.empty()) { return s; }
+    if (s.empty()) {
+        return s;
+    }
     while (s.front() == ' ') {
         s.erase(0, 1);
     }
@@ -197,22 +219,17 @@ int Lrc::GetLyricIndex(int millisec) {
 
 std::vector<std::string> Lrc::getAllLyrics() {
     std::vector<std::string> tmp(0);
-    for (int i = 1; i < lys.size(); i++) { //lys[0] is empty
+    for (int i = 1; i < lys.size(); i++) { // lys[0] is empty
         // if(lys[i].s1.back() == '\0')
         if (!lys[i].s1.empty()) {
             tmp.push_back(lys[i].s1 + lys[i].s2);
-        }
-        else {
+        } else {
             tmp.push_back(std::string(""));
         }
     }
     return tmp;
 }
 
-bool Lrc::failed() {
-    return failure;
-}
+bool Lrc::failed() { return failure; }
 
-std::vector<Lyric> Lrc::GetAllLyrics() {
-    return lys;
-}
+std::vector<Lyric> Lrc::GetAllLyrics() { return lys; }
