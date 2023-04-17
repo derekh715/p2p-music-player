@@ -8,13 +8,13 @@ void rtrim(std::string &s) {
             s.end());
 }
 
-uintmax_t get_file_size(const std::filesystem::path &pathToCheck) {
+uintmax_t get_file_size(const std::filesystem::path &path) {
     // if the path really exists and it is a regular file
     // directory don't have sizes
-    if (std::filesystem::exists(pathToCheck) &&
-        std::filesystem::is_regular_file(pathToCheck)) {
+    if (std::filesystem::exists(path) &&
+        std::filesystem::is_regular_file(path)) {
         auto err = std::error_code{};
-        uintmax_t filesize = std::filesystem::file_size(pathToCheck, err);
+        uintmax_t filesize = std::filesystem::file_size(path, err);
         if (err || filesize != UINTMAX_MAX) {
             return filesize;
         }
