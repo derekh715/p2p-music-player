@@ -59,6 +59,12 @@ class Store {
     // return a boolean indicating if it is successful or not
     bool update(int id, Track &t, bool strict = false);
 
+    // insert or update a track
+    // if the track does not exist in the database, insert it
+    // if it already exists, update it
+    // tracks that are not inserted before should not have a valid id
+    bool upsert(Track &t, bool strict = false);
+
     // delete one track (can't use the word delete in C++)
     // return a boolean indicating if it is successful or not
     bool remove(int id);
@@ -77,6 +83,8 @@ class Store {
     void populate_track_from_get_column(SQLite::Statement &q, Track &t);
     // get absolute path of a file
     bool get_absolute_file(std::string name, std::filesystem::path &path);
+
+    std::string checksum_of_track(Track &t);
 };
 
 #endif

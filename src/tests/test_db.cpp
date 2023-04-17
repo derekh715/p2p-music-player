@@ -160,3 +160,30 @@ TEST(db_test, addin_real_audio_file) {
     EXPECT_THAT(entries[0].checksum.empty(), Eq(false));
     EXPECT_THAT(entries[0].path.empty(), Eq(false));
 }
+
+TEST(db_test, upsert_as_insert) {
+    Store s(true, ":memory:");
+    Track t = {
+        .title = "File Example",
+    };
+    s.upsert(t);
+    auto entries = s.read_all();
+    // so that they are equal
+    t.id = 1;
+    EXPECT_THAT(entries[0], Eq(t));
+}
+
+TEST(db_test, upsert_as_update) {
+    Store s(true, ":memory:");
+    Track t = {
+        .title = "File Example",
+    };
+    s.upsert(t);
+    auto entries = s.read_all();
+    entries[0].title = "Changed!";
+    // should not create a new entry
+    s.upsert(entries[0]);
+    auto new_entries = s.read_all();
+    EXPECT_THAT(new_entries.size(), 1);
+    EXPECT_THAT(new_entries[0], entries[0]);
+}

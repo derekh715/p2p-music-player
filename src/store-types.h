@@ -11,7 +11,7 @@ struct Track {
     // stores the auto generated id of sqlite
     // this field does not need to be initialized if you are just creating
     // an instance of track
-    int id;
+    int id = -1;
     // the following fields are almost the same as the lrc file headers
     std::string album = "";
     std::string artist = "";

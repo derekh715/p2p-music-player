@@ -45,16 +45,7 @@ bool Store::create(Track &t, bool strict) {
             t.path = abs.string();
             q.bind(":path", t.path);
             t.filesize = get_file_size(t.path);
-            uint8_t result[16];
-            // md5.h only supports C-style files
-            FILE *fp = fopen(t.path.c_str(), "r");
-            md5File(fp, result);
-            std::vector<unsigned char> vec;
-            vec.resize(16);
-            for (int i = 0; i < 16; i++) {
-                vec.push_back(result[i]);
-            }
-            t.checksum.assign(to_hex_string(result));
+            t.checksum.assign(checksum_of_track(t));
         }
     }
     q.bind(":duration", t.duration);
@@ -167,9 +158,12 @@ bool Store::update(int id, Track &t, bool strict) {
             q.bind(":path", "");
         }
         q.bind(":path", abs.string());
+        // calculate new checksum
+        // if the file changes, the checksum changes
+        // if it is not the value is still the same
+        t.checksum = checksum_of_track(t);
     }
     q.bind(":duration", t.duration);
-    // compute it!!!
     q.bind(":checksum", t.checksum);
     q.bind(":filesize", t.filesize);
     q.bind(":id", id);
@@ -203,4 +197,25 @@ std::vector<Track> Store::search(std::string str) {
         tracks.push_back(t);
     }
     return tracks;
+}
+
+bool Store::upsert(Track &t, bool strict) {
+    // does not have an id, so it has not been inserted yet
+    if (t.id == -1) {
+        return create(t);
+    }
+    return update(t.id, t, strict);
+}
+
+std::string Store::checksum_of_track(Track &t) {
+    uint8_t result[16];
+    // md5.h only supports C-style files
+    FILE *fp = fopen(t.path.c_str(), "r");
+    md5File(fp, result);
+    std::vector<unsigned char> vec;
+    vec.resize(16);
+    for (int i = 0; i < 16; i++) {
+        vec.push_back(result[i]);
+    }
+    return to_hex_string(result);
 }
