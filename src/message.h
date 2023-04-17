@@ -143,6 +143,22 @@ class Message {
     friend Message &operator<<(Message &m, const NoSuchLyrics &d);
     friend Message &operator>>(Message &m, NoSuchLyrics &d);
 
+    // all kinds of overoload for interleave
+    friend Message &operator<<(Message &m, const PreparePictureSharing &d);
+    friend Message &operator>>(Message &m, PreparePictureSharing &d);
+
+    friend Message &operator<<(Message &m, const PreparedPictureSharing &d);
+    friend Message &operator>>(Message &m, PreparedPictureSharing &d);
+
+    friend Message &operator<<(Message &m, const GetPictureSegment &d);
+    friend Message &operator>>(Message &m, GetPictureSegment &d);
+
+    friend Message &operator<<(Message &m, const ReturnPictureSegment &d);
+    friend Message &operator>>(Message &m, ReturnPictureSegment &d);
+
+    friend Message &operator<<(Message &m, const NoSuchPictureSegment &d);
+    friend Message &operator>>(Message &m, NoSuchPictureSegment &d);
+
     MessageHeader header;
 };
 

@@ -25,7 +25,7 @@ typedef uint16_t peer_id;
 class BaseClient {
   public:
     BaseClient(uint16_t port);
-    ~BaseClient();
+    virtual ~BaseClient();
 
     void push_message(peer_id id, const Message &msg);
 
@@ -94,6 +94,13 @@ class BaseClient {
      * see the PING and PONG examples of distinguishing different message types
      */
     virtual void handle_message(MessageWithOwner &msg) = 0;
+
+    /*
+     * for derived classes to implement
+     * what to do additionally in the cycle, not only read and write messages
+     * should be overriden in base class
+     */
+    virtual void additional_cycle_hook() = 0;
 
     asio::io_context ctx;
     // this accepts incoming connections

@@ -10,7 +10,7 @@
 // I am too lazy please forgive me
 namespace fs = std::filesystem;
 
-#define DEFAULT_CHUNK_SIZE 4096
+#define DEFAULT_CHUNK_SIZE 16384
 
 /*
  * This class represents a file that can be accessed in chunks
@@ -23,7 +23,10 @@ struct ChunkedFile {
     // chunk_size is measured in bytes. So chunk_size = 1000 is 1000 bytes per
     // chunk
     ChunkedFile(fs::path path, int chunk_size = DEFAULT_CHUNK_SIZE);
+    ChunkedFile();
     ~ChunkedFile();
+
+    void open_file(fs::path path, int chunk_size = DEFAULT_CHUNK_SIZE);
 
     // randomly get a segment from the file
     // the returned boolean indicates if the data is correcly written into
@@ -37,7 +40,7 @@ struct ChunkedFile {
     int size;
     int total_segments;
     bool failed;
-    int chunk_size;
+    int chunk_size = 0;
 
   private:
     std::ifstream f;

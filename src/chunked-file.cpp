@@ -1,7 +1,13 @@
 #include "chunked-file.h"
 
-ChunkedFile::ChunkedFile(fs::path path, int chunk_size)
-    : chunk_size{chunk_size} {
+ChunkedFile::ChunkedFile(fs::path path, int chunk_size) {
+    open_file(path, chunk_size);
+}
+
+ChunkedFile::ChunkedFile(){};
+
+void ChunkedFile::open_file(fs::path path, int _chunk_size) {
+    chunk_size = _chunk_size;
     failed = false;
     size = get_file_size(path);
     std::cout << "size is " << size << std::endl;

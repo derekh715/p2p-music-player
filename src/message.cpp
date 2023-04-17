@@ -134,3 +134,48 @@ Message &operator>>(Message &m, NoSuchLyrics &d) {
 }
 
 MessageHeader::MessageHeader(MessageType t) : type(t) {}
+
+Message &operator<<(Message &m, const PreparePictureSharing &d) {
+    m << d.which_one << d.assigned_id_for_peer;
+    return m;
+}
+Message &operator>>(Message &m, PreparePictureSharing &d) {
+    m >> d.assigned_id_for_peer >> d.which_one;
+    return m;
+}
+
+Message &operator<<(Message &m, const GetPictureSegment &d) {
+    m << d.segment_id;
+    return m;
+}
+Message &operator>>(Message &m, GetPictureSegment &d) {
+    m >> d.segment_id;
+    return m;
+}
+
+Message &operator<<(Message &m, const ReturnPictureSegment &d) {
+    m << d.body << d.segment_id << d.assigned_id_for_peer;
+    return m;
+}
+Message &operator>>(Message &m, ReturnPictureSegment &d) {
+    m >> d.assigned_id_for_peer >> d.segment_id >> d.body;
+    return m;
+}
+
+Message &operator<<(Message &m, const NoSuchPictureSegment &d) {
+    m << d.segment_id << d.assigned_id_for_peer;
+    return m;
+}
+Message &operator>>(Message &m, NoSuchPictureSegment &d) {
+    m >> d.segment_id >> d.assigned_id_for_peer;
+    return m;
+}
+
+Message &operator<<(Message &m, const PreparedPictureSharing &d) {
+    m << d.total_segments;
+    return m;
+}
+Message &operator>>(Message &m, PreparedPictureSharing &d) {
+    m >> d.total_segments;
+    return m;
+}

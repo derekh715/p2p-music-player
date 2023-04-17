@@ -4,11 +4,11 @@
 
 void get_ip_and_connect(Client &c) {
     std::string hostname, service, default_host("localhost");
-    std::cout << "Enter a hostname (enter 'l' for localhost)" << std::endl;
-    std::cin >> hostname;
-    if (hostname == "l") {
-        hostname = default_host;
-    }
+    // std::cout << "Enter a hostname (enter 'l' for localhost)" << std::endl;
+    // std::cin >> hostname;
+    // if (hostname == "l") {
+    //     hostname = default_host;
+    // }
     std::cout << "Enter service / port: (this is a number)" << std::endl;
     std::cin >> service;
     c.connect_to_peer(hostname, service);
@@ -61,6 +61,20 @@ void get_lyrics_file(Client &c) {
     c.broadcast(m);
 }
 
+void ask_for_picture_file(Client &c) {
+    std::cout << "Ask for the images!!!!" << std::endl;
+    c.reset_sharing_file();
+    c.open_file_for_writing();
+    PreparePictureSharing pps;
+    for (auto p : c.get_peers()) {
+        Message m(MessageType::PREPARE_PICTURE_SHARING);
+        pps.which_one = p.first;
+        pps.assigned_id_for_peer = c.current_assigned_id++;
+        m << pps;
+        c.push_message(p.first, m);
+    }
+}
+
 /**
  * semi-toy example - demonstrates the use of client class
  * the client needs to open a port on his computer, hence the argv[1]
@@ -79,7 +93,9 @@ int main(int argc, char **argv) {
                   << "C) Ping all machines\n"
                   << "D) Print all connected peers\n"
                   << "E) Ask for track\n"
-                  << "F) Ask for lyrics" << std::endl;
+                  << "F) Ask for lyrics\n"
+                  << "G) Ask for the interleaving images\n"
+                  << "Q) Quit" << std::endl;
         char c;
         std::cin >> c;
         if (c == EOF) {
@@ -109,6 +125,11 @@ int main(int argc, char **argv) {
         case 'F':
             get_lyrics_file(cl);
             break;
+        case 'G':
+            ask_for_picture_file(cl);
+            break;
+        case 'Q':
+            exit(0);
         default:
             std::cout << "Unknown option! Please try again" << std::endl;
         }
