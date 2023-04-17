@@ -1,9 +1,14 @@
 #ifndef STORE_H
 #define STORE_H
 
+#include "md5.h"
 #include "store-types.h"
+#include "util.h"
 #include <SQLiteCpp/SQLiteCpp.h>
+#include <cstdio>
+#include <filesystem>
 #include <iostream>
+#include <system_error>
 #include <vector>
 
 /*

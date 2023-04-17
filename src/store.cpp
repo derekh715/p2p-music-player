@@ -1,9 +1,4 @@
 #include "store.h"
-#include "SQLiteCpp/Statement.h"
-#include "util.h"
-#include <cstdio>
-#include <filesystem>
-#include <system_error>
 
 Store::Store(bool drop_all, std::string filename)
     : db(filename, SQLite::OPEN_CREATE | SQLite::OPEN_READWRITE) {
@@ -47,11 +42,22 @@ bool Store::create(Track &t, bool strict) {
             }
             q.bind(":path", "");
         } else {
-            q.bind(":path", abs.string());
+            t.path = abs.string();
+            q.bind(":path", t.path);
+            t.filesize = get_file_size(t.path);
+            uint8_t result[16];
+            // md5.h only supports C-style files
+            FILE *fp = fopen(t.path.c_str(), "r");
+            md5File(fp, result);
+            std::vector<unsigned char> vec;
+            vec.resize(16);
+            for (int i = 0; i < 16; i++) {
+                vec.push_back(result[i]);
+            }
+            t.checksum.assign(to_hex_string(result));
         }
     }
     q.bind(":duration", t.duration);
-    // compute it!!!
     q.bind(":checksum", t.checksum);
     q.bind(":filesize", t.filesize);
     int nrows = q.exec();
@@ -102,6 +108,7 @@ void Store::populate_track_from_get_column(SQLite::Statement &q, Track &t) {
     t.artist = std::string(artist);
     t.title = std::string(title);
     t.lrcfile = std::string(lrcfile);
+    t.path = std::string(path);
     t.duration = duration;
     t.checksum = std::string(checksum);
     t.filesize = filesize;

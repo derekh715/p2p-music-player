@@ -61,18 +61,21 @@ endfunction()
 # for example, test_lrc.cpp needs lrc.cpp, so I list both of them here
 # and this will compile into an executable called test_lrc
 add_test(test_lrc "" tests/test_lrc.cpp util.cpp lrc.cpp)
-add_test(test_db SQLiteCpp tests/test_db.cpp store.cpp store-types.cpp)
+add_test(test_db SQLiteCpp tests/test_db.cpp store.cpp store-types.cpp util.cpp
+  md5.cpp)
 add_test(test_queue "" tests/test_tsqueue.cpp)
 add_test(test_msg "" tests/test_msg.cpp message.cpp store-types.cpp lrc.cpp
   util.cpp)
 
+set(base_srcs util.cpp store.cpp client.cpp base-client.cpp message.cpp
+  store-types.cpp store-types.cpp lrc.cpp md5.cpp)
+
 # main executable
 # add source files here
 # p2pmss will be the executable that has the main function
-add_executable(p2pmss main.cpp util.cpp lrc.cpp store.cpp application.cpp
-  wav.cpp listfiles.cpp client.cpp base-client.cpp message.cpp store-types.cpp)
-add_executable(network network-example.cpp client.cpp message.cpp util.cpp
-  base-client.cpp store.cpp store-types.cpp lrc.cpp)
+add_executable(p2pmss main.cpp application.cpp
+  wav.cpp listfiles.cpp ${base_srcs})
+add_executable(network network-example.cpp ${base_srcs})
 # we link p2pmss with the necessary libraries like gtkmm4
 target_link_libraries(p2pmss PRIVATE
   SQLiteCpp

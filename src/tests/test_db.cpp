@@ -141,3 +141,22 @@ TEST(db_test, matches_one_or_more) {
     entries = s.search("ve");
     EXPECT_THAT(entries[0], Eq(t)); // it should exist
 }
+
+TEST(db_test, bytes_to_hex_string) {
+    uint8_t bytes[16] = {0x21, 0x22, 0x23, 0x24, 0x25, 0x26};
+    std::string expected = "21222324252600000000000000000000";
+    std::string actual = to_hex_string(bytes);
+    EXPECT_THAT(actual, Eq(expected));
+}
+
+TEST(db_test, addin_real_audio_file) {
+    Store s(true, ":memory:");
+    Track t = {.title = "File Example",
+               .path = "../src/tests/data/file_example.wav"};
+    s.create(t);
+    auto entries = s.search("File");
+    std::cout << entries[0];
+    // the create function to calculate these two things
+    EXPECT_THAT(entries[0].checksum.empty(), Eq(false));
+    EXPECT_THAT(entries[0].path.empty(), Eq(false));
+}
