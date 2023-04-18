@@ -59,8 +59,7 @@ MyApplication::MyApplication(const std::string &file)
     // else it will assume you are invoking it from the project root
     if (std::filesystem::is_regular_file("src")) {
         resources->create_from_file("src")->register_global();
-    }
-    else {
+    } else {
         resources->create_from_file("src/src")->register_global();
     }
 
@@ -97,11 +96,8 @@ MyApplication::MyApplication(const std::string &file)
     }
 
     // this command here starts the client at port 4000
-    // start_client(4000);
-
-    // this command here connects to 192.168.3.4:3000
-    // both of them are strings
-    // client->connect_to_peer("192.168.3.4", "3000");
+    // it can be any port really, just an example
+    start_client(4000);
 }
 
 Glib::RefPtr<MyApplication> MyApplication::create(const std::string &filepath) {
@@ -363,7 +359,8 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
     pTreeView3 = new Gtk::TreeView;
     pTreeView3->set_model(pListStore3);
     pTreeView3->append_column("Ip:", *pTreeModelColumnIp);
-    pTreeView3->get_column(0)->set_sizing(Gtk::TreeViewColumnSizing::TREE_VIEW_COLUMN_AUTOSIZE);
+    pTreeView3->get_column(0)->set_sizing(
+        Gtk::TreeViewColumnSizing::TREE_VIEW_COLUMN_AUTOSIZE);
     pTreeView3->get_column(0)->set_clickable(false);
     pTreeView3->get_column(0)->set_expand(true);
     pTreeView3->get_column(0)->set_alignment(0.5);
@@ -371,9 +368,12 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
     pTreeSelection3 = pTreeView3->get_selection();
     pTreeSelection3->set_mode(Gtk::SELECTION_SINGLE);
     pScrolledWindow3->add(*pTreeView3);
-    pButtonAddIp1->signal_pressed().connect(sigc::mem_fun(*this, &MyApplication::on_ButtonAddIp1_clicked));
-    pButtonRemoveIp1->signal_pressed().connect(sigc::mem_fun(*this, &MyApplication::on_ButtonRemoveIp1_clicked));
-    pButtonRemoveAllIp1->signal_pressed().connect(sigc::mem_fun(*this, &MyApplication::on_ButtonRemoveAllIp1_clicked));
+    pButtonAddIp1->signal_pressed().connect(
+        sigc::mem_fun(*this, &MyApplication::on_ButtonAddIp1_clicked));
+    pButtonRemoveIp1->signal_pressed().connect(
+        sigc::mem_fun(*this, &MyApplication::on_ButtonRemoveIp1_clicked));
+    pButtonRemoveAllIp1->signal_pressed().connect(
+        sigc::mem_fun(*this, &MyApplication::on_ButtonRemoveAllIp1_clicked));
 
     MusicListChanged();
 
@@ -756,11 +756,13 @@ void MyApplication::on_ButtonSettings1_clicked() {
 
 void MyApplication::on_ButtonDialog2Cancel_clicked() { pDialog2->hide(); }
 void MyApplication::on_ButtonDialog2Save_clicked() {
-    bool OriginalShowFileInSubfolders = ShowFileInSubfolders, OriginalShowFileFromNetwork = ShowFileFromNetwork;
+    bool OriginalShowFileInSubfolders = ShowFileInSubfolders,
+         OriginalShowFileFromNetwork = ShowFileFromNetwork;
     ShowFileInSubfolders = pCheckButton1->get_active();
     ShowFileFromNetwork = pCheckButton2->get_active();
     pDialog2->hide();
-    if (OriginalShowFileInSubfolders != ShowFileInSubfolders || OriginalShowFileFromNetwork != ShowFileFromNetwork || IpsChanged)
+    if (OriginalShowFileInSubfolders != ShowFileInSubfolders ||
+        OriginalShowFileFromNetwork != ShowFileFromNetwork || IpsChanged)
         MusicListChanged();
 }
 
@@ -1598,12 +1600,12 @@ void MyApplication::update_spectrum_data(const GstStructure *s) {
     if (strcmp(name, "spectrum") != 0)
         return;
 
-    const GValue* magnitudes_value = gst_structure_get_value(s, "magnitude");
+    const GValue *magnitudes_value = gst_structure_get_value(s, "magnitude");
 
     bool changed = false;
 
     for (guint i = 0; i < spect_bands; ++i) {
-        const GValue* mag = gst_value_list_get_value(magnitudes_value, i);
+        const GValue *mag = gst_value_list_get_value(magnitudes_value, i);
 
         if (mag != NULL || changed) {
             magnitudes.push_back(g_value_get_float(mag));
@@ -1612,8 +1614,7 @@ void MyApplication::update_spectrum_data(const GstStructure *s) {
                 magnitudes.erase(magnitudes.begin(),
                                  magnitudes.begin() + spect_bands);
             }
-        }
-        else {
+        } else {
             magnitudes.push_back(-60);
         }
     }
@@ -1696,10 +1697,18 @@ void MyApplication::on_ButtonAddIp1_clicked() {
     std::string NewIp = std::string(pEntryIp1->get_text());
 
     boost::smatch smatch;
-    if (boost::regex_match(NewIp, smatch, boost::regex("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"))) // ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
+    if (boost::regex_match(
+            NewIp, smatch,
+            boost::regex("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.)"
+                         "{3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+                         "$"))) // ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
     {
         IpsChanged = true;
         NetworkIps.push_back(NewIp);
+        // I added this line, so that when a new ip is added, it will attempt
+        // to connect to that ip immediately
+        // also on port 4000 because why not
+        client->connect_to_peer(NewIp, "4000");
         pEntryIp1->set_text("");
         update_tree_model3();
     }
@@ -1707,17 +1716,24 @@ void MyApplication::on_ButtonAddIp1_clicked() {
 
 void MyApplication::on_ButtonRemoveIp1_clicked() {
     Gtk::TreeModel::iterator iter = pTreeSelection3->get_selected();
-    if (iter)
-    {
+    if (iter) {
         Gtk::TreeModel::Row row = *iter;
         int id = row[*pTreeModelColumnId3];
+        // sorry how do I get the ip address here?
+        // is it like that?
+        // nevermind I think it is
+        auto ip = NetworkIps.at(id);
+        client->remove_socket_by_ip(ip, 4000);
         NetworkIps.erase(std::next(NetworkIps.begin(), id));
         update_tree_model3();
     }
-
 }
 
 void MyApplication::on_ButtonRemoveAllIp1_clicked() {
+    // this removes the connections one by one
+    for (auto &n : NetworkIps) {
+        client->remove_socket_by_ip(n, 4000);
+    }
     NetworkIps = {};
     update_tree_model3();
 }

@@ -9,6 +9,7 @@ void get_ip_and_connect(Client &c) {
     // if (hostname == "l") {
     //     hostname = default_host;
     // }
+    hostname = default_host;
     std::cout << "Enter service / port: (this is a number)" << std::endl;
     std::cin >> service;
     c.connect_to_peer(hostname, service);

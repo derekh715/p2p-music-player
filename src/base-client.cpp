@@ -51,11 +51,18 @@ void BaseClient::accept_socket() {
 void BaseClient::add_to_peers(std::shared_ptr<tcp::socket> socket) {
     peers[current_id] = socket;
     reverse[socket] = current_id;
+    if (socket->is_open()) {
+        auto re = socket->remote_endpoint();
+        peer_ip_map[current_id] = ConnectionInfo{
+            .address = re.address().to_string(),
+            .port = re.port(),
+        };
+    }
     std::cout << "Added to peers with id " << current_id << std::endl;
     current_id++;
 }
 
-void BaseClient::connect_to_peer(const std::string &host,
+bool BaseClient::connect_to_peer(const std::string &host,
                                  const std::string &service) {
     add_to_peers(std::make_shared<tcp::socket>(ctx));
     auto &p = peers[current_id - 1];
@@ -66,8 +73,12 @@ void BaseClient::connect_to_peer(const std::string &host,
                             std::cout << "[CONNECT TO PEER] specified: " << spec
                                       << " " << ec.message();
                             if (!ec) {
-                                std::cout << " actual: "
-                                          << p->remote_endpoint();
+                                auto re = p->remote_endpoint();
+                                std::cout << " actual: " << re;
+                                peer_ip_map[current_id] = ConnectionInfo{
+                                    .address = re.address().to_string(),
+                                    .port = re.port(),
+                                };
                                 // connection is established, now we can wait
                                 // for messages from that socket
                                 start_reading(p);
@@ -76,6 +87,7 @@ void BaseClient::connect_to_peer(const std::string &host,
                             }
                             std::cout << std::endl;
                         });
+    return true;
 }
 
 void BaseClient::start_reading(std::shared_ptr<tcp::socket> socket) {
@@ -165,10 +177,6 @@ void BaseClient::remove_socket(peer_id id) {
         auto rit = reverse.find(it->second);
         peers.erase(it);
         reverse.erase(rit);
-        std::cout << "[REMOVE BY ID] Socket " << id << " has been removed."
-                  << std::endl;
-    } else {
-        std::cout << "[REMOVE BY SOCKET] Cannot find this id " << std::endl;
     }
 }
 
@@ -178,10 +186,16 @@ void BaseClient::remove_socket(std::shared_ptr<tcp::socket> socket) {
         auto rit = peers.find(it->second);
         reverse.erase(it);
         peers.erase(rit);
-        std::cout << "[REMOVE BY SOCKET] Socket " << it->second
-                  << " has been removed." << std::endl;
-    } else {
-        std::cout << "[REMOVE BY SOCKET] Cannot find this socket " << std::endl;
+    }
+}
+
+void BaseClient::remove_socket_by_ip(const std::string &address,
+                                     uint16_t port) {
+    for (auto &p : peer_ip_map) {
+        if (p.second.address == address && p.second.port == port) {
+            remove_socket(p.first);
+            break;
+        }
     }
 }
 

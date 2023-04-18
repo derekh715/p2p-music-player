@@ -16,6 +16,11 @@ using namespace std::literals;
 
 typedef uint16_t peer_id;
 
+struct ConnectionInfo {
+    std::string address;
+    uint16_t port;
+};
+
 /*
  * This represents a client in the peer-to-peer network.
  * It needs a port (so that it can listen to other peers)
@@ -31,12 +36,14 @@ class BaseClient {
 
     void remove_socket(peer_id id);
     void remove_socket(std::shared_ptr<tcp::socket> socket);
+    void remove_socket_by_ip(const std::string &address, uint16_t port);
 
     /*
      * connect to a single peer, called by connect_to_peers
      * the socket will be added to the peers list if successful
+     * it will return false the resolver fails
      */
-    void connect_to_peer(const std::string &host, const std::string &service);
+    bool connect_to_peer(const std::string &host, const std::string &service);
 
     /*
      * this sends a message to ALL clients
@@ -102,6 +109,7 @@ class BaseClient {
     // std::vector<tcp::socket> clients, peers;
     std::map<peer_id, std::shared_ptr<tcp::socket>> peers;
     std::map<std::shared_ptr<tcp::socket>, peer_id> reverse;
+    std::map<peer_id, ConnectionInfo> peer_ip_map;
     // resolves the hostname port to a valid endpoint
     tcp::resolver resolver;
     // the timeout function that calls cycle
