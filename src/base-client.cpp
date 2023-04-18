@@ -1,7 +1,8 @@
 #include "base-client.h"
 
-BaseClient::BaseClient(uint16_t port)
-    : acceptor(ctx, tcp::endpoint(tcp::v4(), port)), resolver(ctx), timer(ctx) {
+BaseClient::BaseClient(uint16_t port, std::chrono::milliseconds time)
+    : acceptor(ctx, tcp::endpoint(tcp::v4(), port)), resolver(ctx),
+      timer(ctx), cycle_time{time} {
     acceptor.set_option(tcp::acceptor::reuse_address(true));
     acceptor.listen();
     trap_signal();
@@ -185,7 +186,7 @@ void BaseClient::remove_socket(std::shared_ptr<tcp::socket> socket) {
 }
 
 void BaseClient::cycle() {
-    timer.expires_from_now(1s);
+    timer.expires_from_now(cycle_time);
     timer.async_wait([&](asio::error_code ec) {
         if (ec) {
             std::cout << "[CYCLE] Something is wrong with the timer: "

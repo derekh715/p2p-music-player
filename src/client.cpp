@@ -1,7 +1,7 @@
 #include "client.h"
 
 Client::Client(uint16_t port, const std::string &filename)
-    : s(false, filename), BaseClient(port) {}
+    : s(false, filename), BaseClient(port, 500ms) {}
 
 Client::~Client() {}
 
@@ -133,7 +133,6 @@ void Client::handle_return_lyrics(MessageWithOwner &t) {
 }
 
 void Client::handle_prepare_picture_sharing(MessageWithOwner &t) {
-    reset_sharing_file();
     // prepare chunked file
     PreparePictureSharing pps;
     t.msg >> pps;
@@ -147,13 +146,15 @@ void Client::handle_prepare_picture_sharing(MessageWithOwner &t) {
     char filename[30];
     sprintf(filename, "1-%d.bmp", pps.which_one);
     p /= filename;
-    cf.open_file(p);
+    // send more things at once
+    cf.open_file(p, DEFAULT_CHUNK_SIZE * 2);
     if (cf.failure()) {
         return;
     }
     Message m(MessageType::PREPARED_PICTURE_SHARING);
     PreparedPictureSharing pps2;
     pps2.total_segments = cf.total_segments;
+    pps2.assigned_id_for_peer = assigned_peer_id;
     m << pps2;
     push_message(t.id, m);
 }
@@ -162,32 +163,35 @@ void Client::handle_prepared_picture_sharing(MessageWithOwner &t) {
     // we know that the peer will engage in sharing that file
     std::cout << "Client " << t.id << " is ready to send the file."
               << std::endl;
-    queue_buffer.push_back(std::queue<ReturnPictureSegment>());
     PreparedPictureSharing pps;
     t.msg >> pps;
-    total_segment_count = pps.total_segments;
+    ps.set_segment_count(pps.total_segments);
     Message m(MessageType::GET_PICTURE_SEGMENT);
     GetPictureSegment gps;
-    gps.segment_id = current_segment_id++;
+    gps.segment_id = ps.get_next_segment_id();
     m << gps;
     push_message(t.id, m);
+    std::cout << "Assigned id is " << pps.assigned_id_for_peer << std::endl;
+    ps.start_timeout(pps.assigned_id_for_peer);
 }
 
 void Client::handle_return_picture_segment(MessageWithOwner &t) {
     ReturnPictureSegment rps;
     t.msg >> rps;
-    std::cout << "Segment " << rps.segment_id << "/" << total_segment_count - 1
-              << " received from client " << t.id
+    ps.end_timeout(rps.assigned_id_for_peer);
+    std::cout << "Segment " << rps.segment_id << "/"
+              << ps.get_segment_count() - 1 << " received from client " << t.id
               << " share id: " << rps.assigned_id_for_peer << std::endl;
-    queue_buffer[rps.assigned_id_for_peer].push(rps);
+    ps.push_segment(rps);
     Message m(MessageType::GET_PICTURE_SEGMENT);
     // it is enough
-    if (rps.segment_id >= total_segment_count) {
+    if (ps.all_segments_asked()) {
         return;
     }
     GetPictureSegment gps;
-    gps.segment_id = current_segment_id++;
+    gps.segment_id = ps.get_next_segment_id();
     m << gps;
+    ps.start_timeout(rps.assigned_id_for_peer);
     push_message(t.id, m);
 }
 
@@ -200,14 +204,12 @@ void Client::handle_get_picture_segment(MessageWithOwner &t) {
     if (gps.segment_id >= cf.total_segments) {
         return;
     }
-    // I do not need this?
-    // rps.assigned_id_for_peer = 1;
     ReturnPictureSegment rps;
     bool fine = cf.get(gps.segment_id, rps.body);
     if (!fine) {
         std::cout << "I cannot get this segment!" << std::endl;
         NoSuchPictureSegment nsps;
-        // nsps.assigned_id_for_peer = 1;
+        nsps.assigned_id_for_peer = assigned_peer_id;
         nsps.segment_id = gps.segment_id;
         Message m(MessageType::NO_SUCH_PICTURE_SEGMENT);
         m << nsps;
@@ -271,58 +273,23 @@ void Client::handle_message(MessageWithOwner &t) {
     }
 }
 
-void Client::open_file_for_writing() {
-    os.open("./interleaved.bmp",
-            std::ios::out | std::ios::binary | std::ios::trunc);
-    if (!os.is_open()) {
-        std::cout << "For some reason the file cannot be opened for writing!"
-                  << std::endl;
-    }
-}
-
-void Client::reset_sharing_file() {
-    current_segment_id = 0;
-    total_segment_count = 0;
-    current_byte = 0;
-    current_assigned_id = 0;
-}
-
-void Client::additional_cycle_hook() { try_writing_segment(); }
-
-void Client::write_segment(const ReturnPictureSegment &rps) {
-    std::cout << "Writing byte: " << rps.body.size() << " to the file ("
-              << current_byte << " to " << current_byte + rps.body.size() << ")"
-              << std::endl;
-    current_byte += rps.body.size();
-    os.write(rps.body.data(), rps.body.size());
-}
-
-void Client::try_writing_segment() {
-    // try to write two segments if possible
-    for (int i = 0; i < 1; i++) {
-        // traverse through the list to see if there are in-order segments
-        // if yes write it to the output stream
-        for (auto &q : queue_buffer) {
-            if (q.empty()) {
-                continue;
-            }
-            auto &rps = q.front();
-            std::cout << "Writing " << current_writing_id
-                      << " Total: " << total_segment_count << std::endl;
-            if (rps.segment_id == current_writing_id) {
-                write_segment(rps);
-                q.pop();
-                // all requests needed are made, exit now
-                if (++current_writing_id >= total_segment_count) {
-                    if (os.is_open()) {
-                        std::cout
-                            << "All segments are received, closing ofstream"
-                            << std::endl;
-                        os.close();
-                    }
-                    return;
-                }
-            }
+void Client::additional_cycle_hook() {
+    ps.try_writing_segment();
+    // if some peer enters the waiting state
+    ps.if_waiting([this](int assigned_peer_id) {
+        Message m(MessageType::GET_PICTURE_SEGMENT);
+        // it is enough
+        if (ps.all_segments_asked()) {
+            return;
         }
-    }
+        GetPictureSegment gps;
+        gps.segment_id = ps.get_next_segment_id();
+        m << gps;
+        push_message(ps.get_peer_id(assigned_peer_id), m);
+    });
+}
+
+void Client::start_file_sharing() {
+    ps.reset_sharing_file();
+    ps.open_file_for_writing();
 }

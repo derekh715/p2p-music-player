@@ -63,13 +63,12 @@ void get_lyrics_file(Client &c) {
 
 void ask_for_picture_file(Client &c) {
     std::cout << "Ask for the images!!!!" << std::endl;
-    c.reset_sharing_file();
-    c.open_file_for_writing();
+    c.ps.reset_sharing_file();
     PreparePictureSharing pps;
     for (auto p : c.get_peers()) {
         Message m(MessageType::PREPARE_PICTURE_SHARING);
         pps.which_one = p.first;
-        pps.assigned_id_for_peer = c.current_assigned_id++;
+        pps.assigned_id_for_peer = c.ps.new_peer(p.first);
         m << pps;
         c.push_message(p.first, m);
     }

@@ -172,10 +172,10 @@ Message &operator>>(Message &m, NoSuchPictureSegment &d) {
 }
 
 Message &operator<<(Message &m, const PreparedPictureSharing &d) {
-    m << d.total_segments;
+    m << d.total_segments << d.assigned_id_for_peer;
     return m;
 }
 Message &operator>>(Message &m, PreparedPictureSharing &d) {
-    m >> d.total_segments;
+    m >> d.assigned_id_for_peer >> d.total_segments;
     return m;
 }

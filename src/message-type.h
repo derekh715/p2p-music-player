@@ -1,3 +1,6 @@
+#ifndef MESSAGE_TYPE_H
+#define MESSAGE_TYPE_H
+
 #include "lrc.h"
 #include "store-types.h"
 #include "util.h"
@@ -80,6 +83,7 @@ struct PreparePictureSharing {
 
 struct PreparedPictureSharing {
     int total_segments;
+    peer_id assigned_id_for_peer;
 };
 
 struct GetPictureSegment {
@@ -143,3 +147,5 @@ constexpr std::string_view get_message_name(MessageType mt) {
         return "???";
     }
 }
+
+#endif

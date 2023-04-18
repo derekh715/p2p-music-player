@@ -3,6 +3,7 @@
 
 #include "base-client.h"
 #include "chunked-file.h"
+#include "picture-sharing.h"
 #include "store.h"
 #include <fstream>
 #include <iostream>
@@ -33,25 +34,14 @@ class Client : public BaseClient {
     void handle_get_picture_segment(MessageWithOwner &t);
 
     std::map<peer_id, std::shared_ptr<tcp::socket>> get_peers();
-    void open_file_for_writing();
-    void reset_sharing_file();
-    void try_writing_segment();
-    void write_segment(const ReturnPictureSegment &rps);
     void additional_cycle_hook() override;
-
-    int current_assigned_id = 0;
+    void start_file_sharing();
+    PictureSharing ps;
 
   private:
     Store s;
-    int current_segment_id = 0;
-    int total_segment_count = 0;
-    int current_byte = 0;
-    int current_writing_id = 0;
     int assigned_peer_id = 0;
-    std::vector<std::queue<ReturnPictureSegment>> queue_buffer;
-
     ChunkedFile cf;
-    std::ofstream os;
 };
 
 #endif

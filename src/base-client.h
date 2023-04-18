@@ -24,7 +24,7 @@ typedef uint16_t peer_id;
  */
 class BaseClient {
   public:
-    BaseClient(uint16_t port);
+    BaseClient(uint16_t port, std::chrono::milliseconds cycle_time = 1000ms);
     virtual ~BaseClient();
 
     void push_message(peer_id id, const Message &msg);
@@ -120,6 +120,7 @@ class BaseClient {
     ThreadSafeQueue<MessageWithOwner> in_msgs;
     peer_id current_id = 1;
     Message temp_msg;
+    std::chrono::milliseconds cycle_time;
 };
 
 #endif
