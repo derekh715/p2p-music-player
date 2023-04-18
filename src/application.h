@@ -65,8 +65,8 @@ public:
     GstBuffer* buffer;
     GstStreamVolume* volume;
 
-    GstElement *bin, *spectrum, *sink;
-    GstPad *pad, *ghost_pad;
+    GstElement* bin, * spectrum, * sink;
+    GstPad* pad, * ghost_pad;
 
 protected:
     void on_activate() override;
@@ -277,11 +277,30 @@ private:
     Gtk::DrawingArea* pDrawingArea1 = nullptr;
     bool done_draw = true;
     const guint spect_bands = 128;
-    std::vector<double> magnitudes = std::vector<double>(spect_bands*5, -60);
+    std::vector<double> magnitudes = std::vector<double>(spect_bands * 5, -60);
     bool on_DrawingArea1_draw(const Cairo::RefPtr<Cairo::Context>& cr, const GdkEventExpose* event);
-    void update_spectrum_data(const GstStructure *s);
+    void update_spectrum_data(const GstStructure* s);
 
     Glib::ustring PrettyString(const Glib::ustring& str, const int MaxLength);
+
+    std::vector<Glib::ustring> NetworkIps = {};
+    bool ShowFileFromNetwork = false, IpsChanged = false;
+    Gtk::CheckButton* pCheckButton2 = nullptr;
+    Gtk::Entry* pEntryIp1 = nullptr;
+    Gtk::Button* pButtonAddIp1 = nullptr, * pButtonRemoveIp1 = nullptr, * pButtonRemoveAllIp1 = nullptr;
+    void on_ButtonAddIp1_clicked();
+    void on_ButtonRemoveIp1_clicked();
+    void on_ButtonRemoveAllIp1_clicked();
+
+    Gtk::ScrolledWindow* pScrolledWindow3 = nullptr;
+    Gtk::TreeModelColumn<int>* pTreeModelColumnId3 = nullptr;
+    Gtk::TreeModelColumn<Glib::ustring>* pTreeModelColumnIp = nullptr;
+    Gtk::TreeModelColumnRecord* pTreeModelColumnRecord3 = nullptr;
+    Glib::RefPtr<Gtk::ListStore> pListStore3;
+    Gtk::TreeView* pTreeView3 = nullptr;
+    Glib::RefPtr<Gtk::TreeSelection> pTreeSelection3;
+
+    void update_tree_model3();
 };
 
 // #endif /* GTKMM_EXAMPLEAPPLICATION_H */

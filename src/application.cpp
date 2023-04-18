@@ -37,7 +37,8 @@ MyApplication::MyApplication()
     // else it will assume you are invoking it from the project root
     if (std::filesystem::is_regular_file("src")) {
         resources->create_from_file("src")->register_global();
-    } else {
+    }
+    else {
         resources->create_from_file("src/src")->register_global();
     }
 
@@ -129,6 +130,11 @@ Gtk::ApplicationWindow* MyApplication::create_appwindow()
     refBuilder->get_widget("ButtonReload1_Img", pButtonReload1_Img);
     pButtonReload1_Img->set_from_resource("/my_app/reload.png");
 
+    refBuilder->get_widget("CheckButton2", pCheckButton2);
+    refBuilder->get_widget("EntryIp1", pEntryIp1);
+    refBuilder->get_widget("ButtonAddIp1", pButtonAddIp1);
+    refBuilder->get_widget("ButtonRemoveIp1", pButtonRemoveIp1);
+    refBuilder->get_widget("ButtonRemoveAllIp1", pButtonRemoveAllIp1);
 
     refBuilder->get_widget("FileChooserDialog1", pFileChooserDialog1);
     pFileChooserDialog1->set_action(Gtk::FileChooserAction::FILE_CHOOSER_ACTION_SELECT_FOLDER);
@@ -309,6 +315,29 @@ Gtk::ApplicationWindow* MyApplication::create_appwindow()
     pTreeSelection2 = pTreeView2->get_selection();
     pTreeSelection2->set_mode(Gtk::SELECTION_SINGLE);
     pScrolledWindow2->add(*pTreeView2);
+
+    refBuilder->get_widget("ScrolledWindow3", pScrolledWindow3);
+    pTreeModelColumnId3 = new Gtk::TreeModelColumn<int>;
+    pTreeModelColumnIp = new Gtk::TreeModelColumn<Glib::ustring>;
+    pTreeModelColumnRecord3 = new Gtk::TreeModelColumnRecord;
+    pTreeModelColumnRecord3->add(*pTreeModelColumnId3);
+    pTreeModelColumnRecord3->add(*pTreeModelColumnIp);
+    pListStore3 = Gtk::ListStore::create(*pTreeModelColumnRecord3);
+    pTreeView3 = new Gtk::TreeView;
+    pTreeView3->set_model(pListStore3);
+    pTreeView3->append_column("Ip:", *pTreeModelColumnIp);
+    pTreeView3->get_column(0)->set_sizing(Gtk::TreeViewColumnSizing::TREE_VIEW_COLUMN_AUTOSIZE);
+    pTreeView3->get_column(0)->set_clickable(false);
+    pTreeView3->get_column(0)->set_expand(true);
+    pTreeView3->get_column(0)->set_alignment(0.5);
+    pTreeView3->get_column(0)->set_sort_indicator(false);
+    pTreeSelection3 = pTreeView3->get_selection();
+    pTreeSelection3->set_mode(Gtk::SELECTION_SINGLE);
+    pScrolledWindow3->add(*pTreeView3);
+    pButtonAddIp1->signal_pressed().connect(sigc::mem_fun(*this, &MyApplication::on_ButtonAddIp1_clicked));
+    pButtonRemoveIp1->signal_pressed().connect(sigc::mem_fun(*this, &MyApplication::on_ButtonRemoveIp1_clicked));
+    pButtonRemoveAllIp1->signal_pressed().connect(sigc::mem_fun(*this, &MyApplication::on_ButtonRemoveAllIp1_clicked));
+
     MusicListChanged();
 
     pMenu1 = new Gtk::Menu();
@@ -606,19 +635,22 @@ void MyApplication::on_AdjustmentVolume_changed() {
 
 void MyApplication::on_ButtonSettings1_clicked() {
     pCheckButton1->set_active(ShowFileInSubfolders);
-    pDialog2->run();
+    pCheckButton2->set_active(ShowFileFromNetwork);
+    pDialog2->show();
+    pDialog2->show_all();
+    pDialog2->show_all_children();
 }
 
 void MyApplication::on_ButtonDialog2Cancel_clicked() {
     pDialog2->hide();
 }
 void MyApplication::on_ButtonDialog2Save_clicked() {
-    bool OriginalShowFileInSubfolders = ShowFileInSubfolders;
+    bool OriginalShowFileInSubfolders = ShowFileInSubfolders, OriginalShowFileFromNetwork = ShowFileFromNetwork;
     ShowFileInSubfolders = pCheckButton1->get_active();
+    ShowFileFromNetwork = pCheckButton2->get_active();
     pDialog2->hide();
-    if (OriginalShowFileInSubfolders != ShowFileInSubfolders)
+    if (OriginalShowFileInSubfolders != ShowFileInSubfolders || OriginalShowFileFromNetwork != ShowFileFromNetwork || IpsChanged)
         MusicListChanged();
-
 }
 
 void MyApplication::on_ButtonAbout1_clicked() {
@@ -790,29 +822,29 @@ void MyApplication::LoadMusic() {
     if (CurrentMusic->Extension != ".wav" || !CurrentMusic->CanonicalWAV) {
         Glib::ustring command = "playbin uri=\"file:///" + CurrentMusic->FilePath + "\"";
         pipeline = gst_parse_launch(command.c_str(), NULL);
-        
-        spectrum = gst_element_factory_make ("spectrum", "spectrum");
-        sink = gst_element_factory_make ("autoaudiosink", "audio_sink");
+
+        spectrum = gst_element_factory_make("spectrum", "spectrum");
+        sink = gst_element_factory_make("autoaudiosink", "audio_sink");
         if (!spectrum || !sink) {
-            g_printerr ("Not all elements could be created.\n");
+            g_printerr("Not all elements could be created.\n");
         }
-        
-        bin = gst_bin_new ("audio_sink_bin");
-        gst_bin_add_many (GST_BIN (bin), spectrum, sink, NULL);
-        gst_element_link_many (spectrum, sink, NULL);
 
-        pad = gst_element_get_static_pad (spectrum, "sink");
-        ghost_pad = gst_ghost_pad_new ("sink", pad);
-        gst_pad_set_active (ghost_pad, TRUE);
-        gst_element_add_pad (bin, ghost_pad);
-        gst_object_unref (pad);
+        bin = gst_bin_new("audio_sink_bin");
+        gst_bin_add_many(GST_BIN(bin), spectrum, sink, NULL);
+        gst_element_link_many(spectrum, sink, NULL);
 
-        g_object_set (G_OBJECT (spectrum), "bands", 128, "interval", 50000000, NULL);
+        pad = gst_element_get_static_pad(spectrum, "sink");
+        ghost_pad = gst_ghost_pad_new("sink", pad);
+        gst_pad_set_active(ghost_pad, TRUE);
+        gst_element_add_pad(bin, ghost_pad);
+        gst_object_unref(pad);
 
-        g_object_set (GST_OBJECT (pipeline), "audio-sink", bin, NULL);
-        
-        char *cwd = getcwd(cwd, 0); // ???
-        
+        g_object_set(G_OBJECT(spectrum), "bands", 128, "interval", 50000000, NULL);
+
+        g_object_set(GST_OBJECT(pipeline), "audio-sink", bin, NULL);
+
+        char* cwd = getcwd(cwd, 0); // ???
+
         // if(false) Glib::setenv("", NULL, 0); // ???
     }
 }
@@ -1084,14 +1116,14 @@ bool MyApplication::timeout1() {
             gst_message_unref(msg);
         }
         else {
-            if(msg != NULL && GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ELEMENT){
-                const GstStructure *s = gst_message_get_structure (msg);
-                update_spectrum_data(s); 
+            if (msg != NULL && GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ELEMENT) {
+                const GstStructure* s = gst_message_get_structure(msg);
+                update_spectrum_data(s);
                 gst_message_unref(msg);
             }
-            else if(msg != NULL)
+            else if (msg != NULL)
                 gst_message_unref(msg);
-            
+
             gst_element_query_position(pipeline, GST_FORMAT_TIME, &CurrentPosInMilliseconds);
             CurrentPosInMilliseconds /= 1000000;
             pLabel1->set_text(TimeString(PlayedInMilliseconds + CurrentPosInMilliseconds));
@@ -1327,25 +1359,26 @@ bool MyApplication::on_EntryCompletion1_match_selected(const Gtk::TreeModel::con
     return false;
 }
 
-void MyApplication::update_spectrum_data(const GstStructure *s) {
-    const gchar *name = gst_structure_get_name (s);
-    if (strcmp (name, "spectrum") != 0)
-        return; 
+void MyApplication::update_spectrum_data(const GstStructure* s) {
+    const gchar* name = gst_structure_get_name(s);
+    if (strcmp(name, "spectrum") != 0)
+        return;
 
-    const GValue *magnitudes_value = gst_structure_get_value(s, "magnitude");
+    const GValue* magnitudes_value = gst_structure_get_value(s, "magnitude");
 
     bool changed = false;
 
     for (guint i = 0; i < spect_bands; ++i) {
-        const GValue *mag = gst_value_list_get_value(magnitudes_value, i);
+        const GValue* mag = gst_value_list_get_value(magnitudes_value, i);
 
         if (mag != NULL || changed) {
             magnitudes.push_back(g_value_get_float(mag));
-            if(!changed){
+            if (!changed) {
                 changed = true;
                 magnitudes.erase(magnitudes.begin(), magnitudes.begin() + spect_bands);
             }
-        } else {
+        }
+        else {
             magnitudes.push_back(-60);
         }
     }
@@ -1353,7 +1386,7 @@ void MyApplication::update_spectrum_data(const GstStructure *s) {
     // if(changed && !done_draw){
     //     std::cout << "droped\n";
     // }
-    if(changed && done_draw){
+    if (changed && done_draw) {
         done_draw = false;
         pDrawingArea1->queue_draw();
     }
@@ -1373,36 +1406,36 @@ bool MyApplication::on_DrawingArea1_draw(const Cairo::RefPtr<Cairo::Context>& cr
 
     // random color
     static double r = 0.5, g = 0.5, b = 0.5;
-    r += 0.1*((double)rand()/RAND_MAX-0.5);
-    g += 0.1*((double)rand()/RAND_MAX-0.5);
-    b += 0.1*((double)rand()/RAND_MAX-0.5);
-    r = r<0.1?0.1:(r>0.9?0.9:r);
-    g = g<0.1?0.1:(g>0.9?0.9:g);
-    b = b<0.1?0.1:(b>0.9?0.9:b);
+    r += 0.1 * ((double)rand() / RAND_MAX - 0.5);
+    g += 0.1 * ((double)rand() / RAND_MAX - 0.5);
+    b += 0.1 * ((double)rand() / RAND_MAX - 0.5);
+    r = r < 0.1 ? 0.1 : (r > 0.9 ? 0.9 : r);
+    g = g < 0.1 ? 0.1 : (g > 0.9 ? 0.9 : g);
+    b = b < 0.1 ? 0.1 : (b > 0.9 ? 0.9 : b);
     cr->set_source_rgb(r, g, b);
 
     std::vector<double> value;
     for (guint i = 0; i < spect_bands; ++i) {
         double v = 0;
-        for (int j = 0; j<5; j++)
-            v += magnitudes[i+((4-j)*spect_bands)]/(j*2+1);
-        v /= 1.0 + 1.0/3 + 1.0/5 + 1.0/7 + 1.0/9;
+        for (int j = 0; j < 5; j++)
+            v += magnitudes[i + ((4 - j) * spect_bands)] / (j * 2 + 1);
+        v /= 1.0 + 1.0 / 3 + 1.0 / 5 + 1.0 / 7 + 1.0 / 9;
         v += 60;
         value.push_back(v);
     }
-    
-    for (int i = 0; i < spect_bands; i+=4) {
+
+    for (int i = 0; i < spect_bands; i += 4) {
         double avg;
-        if(i+3< spect_bands)
-            avg = (value[i]+value[i+1]+value[i+2]+value[i+3])/4;
+        if (i + 3 < spect_bands)
+            avg = (value[i] + value[i + 1] + value[i + 2] + value[i + 3]) / 4;
         else
             avg = value[i];
-        value.insert(value.begin(),avg);
+        value.insert(value.begin(), avg);
     }
-    
+
     for (int i = 0; i < value.size(); ++i) {
         cr->rectangle((int)i * round((double)width / value.size()), height / 2.0 - round(value[i]) * height / 100.0,
-                        (int)round((double)width / value.size()), (round(value[i]) * height / 50.0)==0?1:(round(value[i]) * height / 50.0));
+            (int)round((double)width / value.size()), (round(value[i]) * height / 50.0) == 0 ? 1 : (round(value[i]) * height / 50.0));
         cr->fill();
     }
 
@@ -1417,4 +1450,45 @@ Glib::ustring MyApplication::PrettyString(const Glib::ustring& str, const int Ma
         return(str.substr(0, MaxLength - 3) + "...");
     else
         return str;
+}
+
+void MyApplication::on_ButtonAddIp1_clicked() {
+    std::string NewIp = std::string(pEntryIp1->get_text());
+
+    boost::smatch smatch;
+    if (boost::regex_match(NewIp, smatch, boost::regex("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"))) // ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
+    {
+        IpsChanged = true;
+        NetworkIps.push_back(NewIp);
+        pEntryIp1->set_text("");
+        update_tree_model3();
+    }
+}
+
+void MyApplication::on_ButtonRemoveIp1_clicked() {
+    Gtk::TreeModel::iterator iter = pTreeSelection3->get_selected();
+    if (iter)
+    {
+        Gtk::TreeModel::Row row = *iter;
+        int id = row[*pTreeModelColumnId3];
+        NetworkIps.erase(std::next(NetworkIps.begin(), id));
+        update_tree_model3();
+    }
+
+}
+
+void MyApplication::on_ButtonRemoveAllIp1_clicked() {
+    NetworkIps = {};
+    update_tree_model3();
+}
+
+void MyApplication::update_tree_model3() {
+    std::cout << "update_tree_model3" << std::endl;
+    pListStore3->clear();
+    for (int counter = 0; counter < NetworkIps.size(); counter++) {
+        Gtk::TreeModel::Row row = *(pListStore3->append());
+        row[*pTreeModelColumnId3] = counter;
+        row[*pTreeModelColumnIp] = NetworkIps.at(counter);
+        std::cout << counter << std::endl;
+    }
 }
