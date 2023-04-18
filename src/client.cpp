@@ -1,7 +1,9 @@
 #include "client.h"
 
 Client::Client(uint16_t port, const std::string &filename)
-    : s(false, filename), BaseClient(port, 500ms) {}
+    : s(false, filename), BaseClient(port, 500ms) {
+    cycle();
+}
 
 Client::~Client() {}
 
@@ -66,6 +68,9 @@ void Client::handle_get_track_info(MessageWithOwner &t) {
         std::cout << "The query is empty, returning no such track."
                   << std::endl;
         Message m(MessageType::NO_SUCH_TRACK);
+        NoSuchTrack nst;
+        nst.title = gti.title;
+        m << nst;
         push_message(t.id, m);
         return;
     }
@@ -74,6 +79,9 @@ void Client::handle_get_track_info(MessageWithOwner &t) {
         std::cout << "Couldn't find track. Tell peer that I do not have it."
                   << std::endl;
         Message m(MessageType::NO_SUCH_TRACK);
+        NoSuchTrack nst;
+        nst.title = gti.title;
+        m << nst;
         push_message(t.id, m);
     } else {
         std::cout << "Found it. Tell peer that I do have it." << std::endl;
@@ -100,7 +108,8 @@ void Client::handle_get_lyrics(MessageWithOwner &t) {
               << std::endl;
     Lrc f(gl.filename.c_str());
     if (f.failed()) {
-        NoSuchLyrics nsl{gl.filename};
+        NoSuchLyrics nsl;
+        nsl.filename = gl.filename;
         Message m(MessageType::NO_SUCH_LYRICS);
         m << nsl;
         push_message(t.id, m);
@@ -292,4 +301,24 @@ void Client::additional_cycle_hook() {
 void Client::start_file_sharing() {
     ps.reset_sharing_file();
     ps.open_file_for_writing();
+}
+
+void Client::cycle() {
+    timer.expires_from_now(cycle_time);
+    timer.async_wait([&](asio::error_code ec) {
+        if (ec) {
+            std::cout << "[CYCLE] Something is wrong with the timer: "
+                      << ec.message() << std::endl;
+            return;
+        }
+        additional_cycle_hook();
+        // clear the in messages array first, if there are messages clear them
+        while (!in_msgs.empty()) {
+            auto msg = in_msgs.pop_front();
+            handle_message(msg);
+        }
+        // now we clear the out messages array
+        start_writing();
+        cycle();
+    });
 }

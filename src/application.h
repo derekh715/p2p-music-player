@@ -6,10 +6,15 @@
 // #define GTKMM_EXAMPLEAPPLICATION_H
 #include "listfiles.h"
 #include "lrc.h"
+#include "message.h"
+#include "message-type.h"
 #include "wav.h"
+#include "store.h"
+#include "application-client.h"
 
 #include <iostream>
 #include <string>
+#include <memory>
 #include <filesystem>
 #include <algorithm>
 #include <random>
@@ -40,10 +45,11 @@ class MyApplication;
 class MyApplication: public Gtk::Application
 {
 protected:
-    MyApplication();
+    MyApplication(const std::string &file);
+
 
 public:
-    static Glib::RefPtr<MyApplication> create();
+    static Glib::RefPtr<MyApplication> create(const std::string &file);
 
     typedef struct _GstData {
         GstElement* playbin;
@@ -73,7 +79,7 @@ protected:
 
 private:
     Wav* wav;
-    Lrc* LrcFile;
+    std::unique_ptr<Lrc> LrcFile;
     std::vector<Lyric> Lyrics;
     int SelectedLyricIndex, LyricIndex, LyricEndtime;
     enum State { PLAYING, PAUSED };
@@ -301,6 +307,21 @@ private:
     Glib::RefPtr<Gtk::TreeSelection> pTreeSelection3;
 
     void update_tree_model3();
+    // storage and network related (members and methods)
+    Store store;
+    std::unique_ptr<ApplicationClient> client;
+
+    Track convert_music_info_to_track(const MusicInfoCDT& m);
+    // this will start the TCP client
+    // port is the port he will listen to
+    void start_client(uint16_t port);
+    void handle_message(MessageWithOwner &t);
+    void handle_get_track_info(MessageWithOwner &t);
+    void handle_return_track_info(MessageWithOwner &t);
+    void handle_no_such_track(MessageWithOwner &t);
+    void handle_get_lyrics(MessageWithOwner &t);
+    void handle_return_lyrics(MessageWithOwner &t);
+    void handle_no_such_lyrics(MessageWithOwner &t);
 };
 
 // #endif /* GTKMM_EXAMPLEAPPLICATION_H */

@@ -199,12 +199,37 @@ std::vector<Track> Store::search(std::string str) {
     return tracks;
 }
 
+bool Store::search_with_path(std::string str, Track &t) {
+    SQLite::Statement q(db, "SELECT * FROM tracks "
+                            "WHERE path = :path ");
+    q.bind(":path", str);
+    bool success = q.executeStep();
+    if (success) {
+        populate_track_from_get_column(q, t);
+    }
+    return success;
+}
+
 bool Store::upsert(Track &t, bool strict) {
-    // does not have an id, so it has not been inserted yet
-    if (t.id == -1) {
+    // compute the checksum again to see if they differs
+    Track returned;
+    bool has = search_with_path(t.path, returned);
+    if (!has) {
         return create(t);
     }
+    // if there is such file, just update it
     return update(t.id, t, strict);
+}
+
+int Store::upsert_many(std::vector<Track> &tracks, bool strict) {
+    int inserted = 0;
+    for (auto &t : tracks) {
+        bool good = upsert(t, strict);
+        if (good) {
+            inserted++;
+        }
+    }
+    return inserted;
 }
 
 std::string Store::checksum_of_track(Track &t) {

@@ -15,6 +15,16 @@ int main(int argc, char **argv) {
                                   CurrentDirectory.string() + "\\bin;" +
                                   getenv("PATH");
     putenv(PathEnvVariable.data());
-    auto application = MyApplication::create();
+    // if we are using the same computer, then multiple instances
+    // of the same program will write to the same database file
+    // pass a database file so that they won't write to the same database
+    // if nothing is passed, use sqlite.db
+    std::string database_file;
+    if (argc == 2) {
+        database_file.assign(std::string(argv[1]));
+    } else {
+        database_file.assign(std::string("sqlite.db"));
+    }
+    auto application = MyApplication::create(database_file);
     return application->run(argc, argv);
 }

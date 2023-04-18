@@ -65,6 +65,8 @@ class Store {
     // tracks that are not inserted before should not have a valid id
     bool upsert(Track &t, bool strict = false);
 
+    int upsert_many(std::vector<Track> &tracks, bool strict = false);
+
     // delete one track (can't use the word delete in C++)
     // return a boolean indicating if it is successful or not
     bool remove(int id);
@@ -73,6 +75,9 @@ class Store {
     // returns a vector of search results
     // if nothing is matched, the vector is empty
     std::vector<Track> search(std::string str);
+
+    // search with file path
+    bool search_with_path(std::string str, Track &t);
 
   private:
     // the database handle for executing each query

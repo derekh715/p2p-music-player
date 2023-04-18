@@ -7,7 +7,6 @@ BaseClient::BaseClient(uint16_t port, std::chrono::milliseconds time)
     acceptor.listen();
     trap_signal();
     accept_socket();
-    cycle();
     worker = std::thread([this]() { ctx.run(); });
 }
 
@@ -56,7 +55,8 @@ void BaseClient::add_to_peers(std::shared_ptr<tcp::socket> socket) {
     current_id++;
 }
 
-void BaseClient::connect_to_peer(std::string &host, std::string &service) {
+void BaseClient::connect_to_peer(const std::string &host,
+                                 const std::string &service) {
     add_to_peers(std::make_shared<tcp::socket>(ctx));
     auto &p = peers[current_id - 1];
     auto endpoints = resolver.resolve(host, service);
@@ -193,7 +193,6 @@ void BaseClient::cycle() {
                       << ec.message() << std::endl;
             return;
         }
-        additional_cycle_hook();
 
         // clear the in messages array first, if there are messages clear them
         while (!in_msgs.empty()) {

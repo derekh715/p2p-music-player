@@ -34,7 +34,8 @@ class Client : public BaseClient {
     void handle_get_picture_segment(MessageWithOwner &t);
 
     std::map<peer_id, std::shared_ptr<tcp::socket>> get_peers();
-    void additional_cycle_hook() override;
+    void cycle();
+    void additional_cycle_hook();
     void start_file_sharing();
     PictureSharing ps;
 

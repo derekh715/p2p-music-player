@@ -25,7 +25,7 @@ typedef uint16_t peer_id;
 class BaseClient {
   public:
     BaseClient(uint16_t port, std::chrono::milliseconds cycle_time = 1000ms);
-    virtual ~BaseClient();
+    ~BaseClient();
 
     void push_message(peer_id id, const Message &msg);
 
@@ -36,7 +36,7 @@ class BaseClient {
      * connect to a single peer, called by connect_to_peers
      * the socket will be added to the peers list if successful
      */
-    void connect_to_peer(std::string &host, std::string &service);
+    void connect_to_peer(const std::string &host, const std::string &service);
 
     /*
      * this sends a message to ALL clients
@@ -94,13 +94,6 @@ class BaseClient {
      * see the PING and PONG examples of distinguishing different message types
      */
     virtual void handle_message(MessageWithOwner &msg) = 0;
-
-    /*
-     * for derived classes to implement
-     * what to do additionally in the cycle, not only read and write messages
-     * should be overriden in base class
-     */
-    virtual void additional_cycle_hook() = 0;
 
     asio::io_context ctx;
     // this accepts incoming connections
