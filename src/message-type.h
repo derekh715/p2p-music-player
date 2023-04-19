@@ -14,6 +14,12 @@ enum class MessageType : std::uint32_t {
     PING,
     PONG,
 
+    // in the application the search
+    // is implemented with the entire database
+    // returned to the client
+    GET_DATABASE,
+    RETURN_DATABASE,
+
     // ask for information about a track
     GET_TRACK_INFO,
     // respond to GET_TRACK_INFO
@@ -41,6 +47,10 @@ enum class MessageType : std::uint32_t {
     GET_PICTURE_SEGMENT,
     RETURN_PICTURE_SEGMENT,
     NO_SUCH_PICTURE_SEGMENT
+};
+
+struct ReturnDatabase {
+    std::vector<Track> tracks;
 };
 
 // the body of MessageType::GET_TRACK_INFO
@@ -143,6 +153,10 @@ constexpr std::string_view get_message_name(MessageType mt) {
         return "RETURN_PICTURE_SEGMENT";
     case MessageType::NO_SUCH_PICTURE_SEGMENT:
         return "NO_SUCH_PICTURE_SEGMENT";
+    case MessageType::GET_DATABASE:
+        return "GET_DATABASE";
+    case MessageType::RETURN_DATABASE:
+        return "RETURN_DATABASE";
     default:
         return "???";
     }

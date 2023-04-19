@@ -75,6 +75,16 @@ void ask_for_picture_file(Client &c) {
     }
 }
 
+void ask_for_database(Client &c) {
+    std::cout << "Ask for the database" << std::endl;
+    peer_id id;
+    std::cout << "Enter an ID: (it should start from 1, see the output above)"
+              << std::endl;
+    std::cin >> id;
+    Message m(MessageType::GET_DATABASE);
+    c.push_message(id, m);
+}
+
 /**
  * semi-toy example - demonstrates the use of client class
  * the client needs to open a port on his computer, hence the argv[1]
@@ -95,6 +105,7 @@ int main(int argc, char **argv) {
                   << "E) Ask for track\n"
                   << "F) Ask for lyrics\n"
                   << "G) Ask for the interleaving images\n"
+                  << "H) Ask for the database of a client\n"
                   << "Q) Quit" << std::endl;
         char c;
         std::cin >> c;
@@ -127,6 +138,9 @@ int main(int argc, char **argv) {
             break;
         case 'G':
             ask_for_picture_file(cl);
+            break;
+        case 'H':
+            ask_for_database(cl);
             break;
         case 'Q':
             exit(0);

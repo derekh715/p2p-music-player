@@ -40,16 +40,21 @@
 #include <taglib/id3v2tag.h>
 #include <taglib/tbytevector.h>
 
+struct TrackWithOwner {
+    peer_id peer;
+    Track track;
+};
+
 class MyApplication;
 
 class MyApplication: public Gtk::Application
 {
 protected:
-    MyApplication(const std::string &file);
+    MyApplication(const std::string &file, uint16_t port);
 
 
 public:
-    static Glib::RefPtr<MyApplication> create(const std::string &file);
+    static Glib::RefPtr<MyApplication> create(const std::string &file, uint16_t port);
 
     typedef struct _GstData {
         GstElement* playbin;
@@ -309,19 +314,25 @@ private:
     void update_tree_model3();
     // storage and network related (members and methods)
     Store store;
+    uint16_t port;
     std::unique_ptr<ApplicationClient> client;
+    std::vector<TrackWithOwner> network_tracks;
 
     Track convert_music_info_to_track(const MusicInfoCDT& m);
     // this will start the TCP client
     // port is the port he will listen to
     void start_client(uint16_t port);
+    // what to do when a connection is establiehd
+    void on_connect(peer_id id);
     void handle_message(MessageWithOwner &t);
-    void handle_get_track_info(MessageWithOwner &t);
-    void handle_return_track_info(MessageWithOwner &t);
-    void handle_no_such_track(MessageWithOwner &t);
+    // void handle_get_track_info(MessageWithOwner &t);
+    // void handle_return_track_info(MessageWithOwner &t);
+    // void handle_no_such_track(MessageWithOwner &t);
     void handle_get_lyrics(MessageWithOwner &t);
     void handle_return_lyrics(MessageWithOwner &t);
     void handle_no_such_lyrics(MessageWithOwner &t);
+    void handle_get_database(MessageWithOwner &t);
+    void handle_return_database(MessageWithOwner &t);
 };
 
 // #endif /* GTKMM_EXAMPLEAPPLICATION_H */

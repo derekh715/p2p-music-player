@@ -1,8 +1,9 @@
 #include "application-client.h"
 
 ApplicationClient::ApplicationClient(
-    uint16_t port, std::function<void(MessageWithOwner &)> handler)
-    : BaseClient(port), handler{handler} {
+    uint16_t port, std::function<void(MessageWithOwner &)> handler,
+    std::function<void(peer_id)> connect)
+    : BaseClient(port), handler{handler}, connect_handler{connect} {
     cycle();
 }
 
@@ -23,3 +24,5 @@ void ApplicationClient::cycle() {
         cycle();
     });
 }
+
+void ApplicationClient::on_connect(peer_id id) { connect_handler(id); }

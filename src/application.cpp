@@ -47,9 +47,10 @@ Glib::ustring MyApplication::TimeString(int time) {
     return Glib::ustring(text);
 }
 
-MyApplication::MyApplication(const std::string &file)
-    : store(false, file), Gtk::Application("org.gtkmm.examples.application",
-                                           Gio::APPLICATION_HANDLES_OPEN) {
+MyApplication::MyApplication(const std::string &file, uint16_t port)
+    : store(false, file),
+      port(port), Gtk::Application("org.gtkmm.examples.application",
+                                   Gio::APPLICATION_HANDLES_OPEN) {
 
     gst_init(NULL, NULL);
 
@@ -95,13 +96,15 @@ MyApplication::MyApplication(const std::string &file)
             pIcons->push_back(pAudioIcon);
     }
 
-    // this command here starts the client at port 4000
+    // this command here starts the client at port
+    // default is 4000, can be overridden with command line args
     // it can be any port really, just an example
-    start_client(4000);
+    start_client(port);
 }
 
-Glib::RefPtr<MyApplication> MyApplication::create(const std::string &filepath) {
-    return Glib::RefPtr<MyApplication>(new MyApplication(filepath));
+Glib::RefPtr<MyApplication> MyApplication::create(const std::string &filepath,
+                                                  uint16_t port) {
+    return Glib::RefPtr<MyApplication>(new MyApplication(filepath, port));
 }
 
 Gtk::ApplicationWindow *MyApplication::create_appwindow() {
@@ -1695,21 +1698,37 @@ Glib::ustring MyApplication::PrettyString(const Glib::ustring &str,
 
 void MyApplication::on_ButtonAddIp1_clicked() {
     std::string NewIp = std::string(pEntryIp1->get_text());
-
     boost::smatch smatch;
+    // now the regex becomes:
+    // match the first three octets xxx.xxx.xxx.
+    // match the last octet xxx
+    // capture the four octets xxx.xxx.xxx.xxx
+    // match the port (if there is one) (captured)
+    // so smatch will be { full, four octets, port }
     if (boost::regex_match(
             NewIp, smatch,
-            boost::regex("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.)"
-                         "{3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
-                         "$"))) // ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
+            boost::regex(
+                "^((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?\\.)"
+                "{3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+                "):?(\\d{4,5})?$"))) // ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
     {
-        IpsChanged = true;
-        NetworkIps.push_back(NewIp);
+        std::string port_no = "4000";
         // I added this line, so that when a new ip is added, it will attempt
         // to connect to that ip immediately
         // also on port 4000 because why not
-        client->connect_to_peer(NewIp, "4000");
+        if (smatch.size() == 3) {
+            port_no = smatch[2];
+        }
+        // try to get the online database immediatey when the connection is
+        // established
+        bool success = client->connect_to_peer(smatch[1], port_no);
+        // if the ip cannot be resolved, don't add it to the ip list
+        if (!success) {
+            return;
+        }
+        IpsChanged = true;
         pEntryIp1->set_text("");
+        NetworkIps.push_back(NewIp);
         update_tree_model3();
     }
 }
@@ -1723,7 +1742,16 @@ void MyApplication::on_ButtonRemoveIp1_clicked() {
         // is it like that?
         // nevermind I think it is
         auto ip = NetworkIps.at(id);
-        client->remove_socket_by_ip(ip, 4000);
+        std::cout << ip << std::endl;
+        std::string port = "4000";
+        std::string address = ip;
+        auto pos = ip.find(":");
+        // has a port
+        if (pos != std::string::npos) {
+            address = ip.substr(0, pos);
+            port = ip.substr(pos + 1, std::string::npos);
+        }
+        client->remove_socket_by_ip(address, std::stoi(port));
         NetworkIps.erase(std::next(NetworkIps.begin(), id));
         update_tree_model3();
     }
@@ -1760,29 +1788,27 @@ void MyApplication::start_client(uint16_t port) {
     client = std::make_unique<ApplicationClient>(
         // capturing MyApplication, don't know how much cpying is done
         // but who cares?
-        port, [this](MessageWithOwner &t) { handle_message(t); });
+        port, [this](MessageWithOwner &t) { handle_message(t); },
+        [this](peer_id id) { on_connect(id); });
 }
 
 void MyApplication::handle_message(MessageWithOwner &t) {
     // see which type of message the incoming message is
     switch (t.msg.header.type) {
-    case MessageType::GET_TRACK_INFO:
-        handle_get_track_info(t);
-        break;
-    case MessageType::RETURN_TRACK_INFO:
-        handle_return_track_info(t);
-        break;
     case MessageType::GET_LYRICS:
         handle_get_lyrics(t);
         break;
     case MessageType::RETURN_LYRICS:
         handle_return_lyrics(t);
         break;
-    case MessageType::NO_SUCH_TRACK:
-        handle_no_such_track(t);
-        break;
     case MessageType::NO_SUCH_LYRICS:
         handle_no_such_lyrics(t);
+        break;
+    case MessageType::GET_DATABASE:
+        handle_get_database(t);
+        break;
+    case MessageType::RETURN_DATABASE:
+        handle_return_database(t);
         break;
 
     // these messages are for streaming audio files
@@ -1804,53 +1830,89 @@ void MyApplication::handle_message(MessageWithOwner &t) {
     case MessageType::GET_PICTURE_SEGMENT:
     case MessageType::RETURN_PICTURE_SEGMENT:
     case MessageType::NO_SUCH_PICTURE_SEGMENT:
+    // we also don't handle these two
+    case MessageType::GET_TRACK_INFO:
+    case MessageType::RETURN_TRACK_INFO:
+    case MessageType::NO_SUCH_TRACK:
     // these cases are just for sanity testing, they are also not used in
     // the real application
     case MessageType::PING:
-        client->push_message(t.id, Message(MessageType::PONG));
-        break;
     case MessageType::PONG:
     case MessageType::NOTHING:
         break;
     }
 }
 
-// NOTE: this handler is invoked when ANOTHER PEER returns some track info to
-// you
-void MyApplication::handle_return_track_info(MessageWithOwner &t) {
-    ReturnTrackInfo ti;
-    t.msg >> ti;
+void MyApplication::on_connect(peer_id id) {
+    std::cout << "It is " << id << std::endl;
+    Message m(MessageType::GET_DATABASE);
+    client->push_message(id, m);
+}
+
+// NOTE: this handler is invoked when ANOTHER PEER is getting your database
+void MyApplication::handle_get_database(MessageWithOwner &t) {
+    ReturnDatabase rd;
+    rd.tracks = store.read_all();
+    Message m(MessageType::RETURN_DATABASE);
+    m << rd;
+    client->push_message(t.id, m);
     // now t.msg.tracks will have all the searched tracks from the peers
     // where should I put the tracks to?
 }
 
-// NOTE: this handler handles the case of a peer NOT HAVING THAT TRACK
-// in this case it does nothing
-void MyApplication::handle_no_such_track(MessageWithOwner &t) {
-    NoSuchTrack nt;
-    t.msg >> nt;
-    std::cout << nt.title << "is not owned by client " << t.id << std::endl;
-}
-
-// NOTE: this handler is invoked when ANOTHER PEER asks you for a track
-void MyApplication::handle_get_track_info(MessageWithOwner &t) {
-    GetTrackInfo gti;
-    t.msg >> gti;
-    auto results = store.search(gti.title);
-    if (results.empty()) {
-        NoSuchTrack nst;
-        Message m(MessageType::NO_SUCH_TRACK);
-        nst.title = gti.title;
-        m << nst;
-        client->push_message(t.id, m);
-    } else {
-        Message m(MessageType::RETURN_TRACK_INFO);
-        // message class allows pushing the vectors into it
-        ReturnTrackInfo rti{.tracks = results, .title = gti.title};
-        m << rti;
-        client->push_message(t.id, m);
+// NOTE: this handler is invoked when ANOTHER PEER returns you with their
+// database
+void MyApplication::handle_return_database(MessageWithOwner &t) {
+    ReturnDatabase rd;
+    t.msg >> rd;
+    std::cout << "Here are the results from client " << t.id << std::endl;
+    // append the tracks from peer to the network tracks vector
+    for (auto &r : rd.tracks) {
+        std::cout << r << std::endl;
+        TrackWithOwner two = {
+            .peer = t.id,
+            .track = r,
+        };
+        network_tracks.push_back(two);
     }
 }
+
+// NOTE: this handler is invoked when ANOTHER PEER returns some track info to
+// you
+// void MyApplication::handle_return_track_info(MessageWithOwner &t) {
+//     ReturnTrackInfo ti;
+//     t.msg >> ti;
+//     // now t.msg.tracks will have all the searched tracks from the peers
+//     // where should I put the tracks to?
+// }
+
+// NOTE: this handler handles the case of a peer NOT HAVING THAT TRACK
+// in this case it does nothing
+// void MyApplication::handle_no_such_track(MessageWithOwner &t) {
+//     NoSuchTrack nt;
+//     t.msg >> nt;
+//     std::cout << nt.title << "is not owned by client " << t.id << std::endl;
+// }
+
+// NOTE: this handler is invoked when ANOTHER PEER asks you for a track
+// void MyApplication::handle_get_track_info(MessageWithOwner &t) {
+//     GetTrackInfo gti;
+//     t.msg >> gti;
+//     auto results = store.search(gti.title);
+//     if (results.empty()) {
+//         NoSuchTrack nst;
+//         Message m(MessageType::NO_SUCH_TRACK);
+//         nst.title = gti.title;
+//         m << nst;
+//         client->push_message(t.id, m);
+//     } else {
+//         Message m(MessageType::RETURN_TRACK_INFO);
+//         // message class allows pushing the vectors into it
+//         ReturnTrackInfo rti{.tracks = results, .title = gti.title};
+//         m << rti;
+//         client->push_message(t.id, m);
+//     }
+// }
 
 // NOTE: this handler is invoked when ANOTHER PEER asks you for lyrics
 void MyApplication::handle_get_lyrics(MessageWithOwner &t) {

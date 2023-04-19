@@ -179,3 +179,12 @@ Message &operator>>(Message &m, PreparedPictureSharing &d) {
     m >> d.assigned_id_for_peer >> d.total_segments;
     return m;
 }
+
+Message &operator<<(Message &m, const ReturnDatabase &d) {
+    m << d.tracks;
+    return m;
+}
+Message &operator>>(Message &m, ReturnDatabase &d) {
+    m >> d.tracks;
+    return m;
+}

@@ -41,6 +41,7 @@ void BaseClient::accept_socket() {
             // connection is established, now we can wait
             // for messages from that socket
             start_reading(std::shared_ptr<tcp::socket>(ptr));
+            on_connect(current_id - 1);
             accept_socket();
         } else {
             std::cout << ec.message() << std::endl;
@@ -66,7 +67,12 @@ bool BaseClient::connect_to_peer(const std::string &host,
                                  const std::string &service) {
     add_to_peers(std::make_shared<tcp::socket>(ctx));
     auto &p = peers[current_id - 1];
-    auto endpoints = resolver.resolve(host, service);
+    std::error_code resolve_error;
+    auto endpoints = resolver.resolve(host, service, resolve_error);
+    if (resolve_error) {
+        std::cout << "Catched: " << resolve_error << std::endl;
+        return false;
+    }
     asio::async_connect(*p, endpoints,
                         [&, spec = (host + ":"s + service)](
                             asio::error_code ec, tcp::endpoint endpoint) {
@@ -75,13 +81,14 @@ bool BaseClient::connect_to_peer(const std::string &host,
                             if (!ec) {
                                 auto re = p->remote_endpoint();
                                 std::cout << " actual: " << re;
-                                peer_ip_map[current_id] = ConnectionInfo{
+                                peer_ip_map[current_id - 1] = ConnectionInfo{
                                     .address = re.address().to_string(),
                                     .port = re.port(),
                                 };
                                 // connection is established, now we can wait
                                 // for messages from that socket
                                 start_reading(p);
+                                on_connect(current_id - 1);
                             } else {
                                 peers.erase(peers.find(current_id - 1));
                             }

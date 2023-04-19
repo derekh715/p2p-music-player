@@ -17,6 +17,7 @@ class Client : public BaseClient {
     void handle_message(MessageWithOwner &msg) override;
 
     void populate_tracks();
+    void on_connect(peer_id id) override;
 
     // handlers
     void handle_ping(MessageWithOwner &t);
@@ -32,6 +33,8 @@ class Client : public BaseClient {
     void handle_prepared_picture_sharing(MessageWithOwner &t);
     void handle_return_picture_segment(MessageWithOwner &t);
     void handle_get_picture_segment(MessageWithOwner &t);
+    void handle_get_database(MessageWithOwner &t);
+    void handle_return_database(MessageWithOwner &t);
 
     std::map<peer_id, std::shared_ptr<tcp::socket>> get_peers();
     void cycle();

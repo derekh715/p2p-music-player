@@ -11,6 +11,11 @@ std::map<peer_id, std::shared_ptr<tcp::socket>> Client::get_peers() {
     return peers;
 }
 
+void Client::on_connect(peer_id id) {
+    std::cout << "Overridden!!!" << std::endl;
+    push_message(id, Message(MessageType::PING));
+}
+
 void Client::populate_tracks() {
     // add this to the database (for the example network application)
     Track t{.id = 3,
@@ -277,6 +282,12 @@ void Client::handle_message(MessageWithOwner &t) {
     case MessageType::GET_PICTURE_SEGMENT:
         handle_get_picture_segment(t);
         break;
+    case MessageType::GET_DATABASE:
+        handle_get_database(t);
+        break;
+    case MessageType::RETURN_DATABASE:
+        handle_return_database(t);
+        break;
     default:
         std::cout << "Message with unknown message type!" << std::endl;
     }
@@ -321,4 +332,23 @@ void Client::cycle() {
         start_writing();
         cycle();
     });
+}
+
+void Client::handle_get_database(MessageWithOwner &t) {
+    std::cout << "Client " << t.id << " needs the entire database!"
+              << std::endl;
+    ReturnDatabase rd;
+    Message m(MessageType::RETURN_DATABASE);
+    rd.tracks = s.read_all();
+    m << rd;
+    push_message(t.id, m);
+}
+
+void Client::handle_return_database(MessageWithOwner &t) {
+    ReturnDatabase rd;
+    t.msg >> rd;
+    std::cout << "Returning database:" << std::endl;
+    for (auto &t : rd.tracks) {
+        std::cout << t << std::endl;
+    }
 }

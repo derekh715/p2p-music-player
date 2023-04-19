@@ -11,15 +11,18 @@ class ApplicationClient : public BaseClient {
     // handler receives a MessageWithOwner object
     // which can send another message etc.
     ApplicationClient(uint16_t port,
-                      std::function<void(MessageWithOwner &)> handler);
+                      std::function<void(MessageWithOwner &)> handler,
+                      std::function<void(peer_id)> connect_handler);
     ~ApplicationClient();
 
     void handle_message(MessageWithOwner &msg) override;
+    void on_connect(peer_id id) override;
 
     void cycle();
 
   private:
     std::function<void(MessageWithOwner &)> handler;
+    std::function<void(peer_id)> connect_handler;
 };
 
 #endif

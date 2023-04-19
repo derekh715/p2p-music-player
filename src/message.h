@@ -111,6 +111,9 @@ class Message {
     friend Message &operator<<(Message &m, const Track &d);
     friend Message &operator>>(Message &m, Track &d);
 
+    friend Message &operator<<(Message &m, const ReturnDatabase &d);
+    friend Message &operator>>(Message &m, ReturnDatabase &d);
+
     // specialized template for get track info struct
     friend Message &operator<<(Message &m, const GetTrackInfo &d);
     friend Message &operator>>(Message &m, GetTrackInfo &d);
