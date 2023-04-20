@@ -48,7 +48,6 @@ class Message {
     Message();
     std::size_t size() const;
     std::vector<char> body;
-
     // mainly for debugging
     friend std::ostream &operator<<(std::ostream &os, const Message &m);
 
@@ -161,6 +160,9 @@ class Message {
 
     friend Message &operator<<(Message &m, const NoSuchPictureSegment &d);
     friend Message &operator>>(Message &m, NoSuchPictureSegment &d);
+
+    friend Message &operator<<(Message &m, const GetAudioFile &d);
+    friend Message &operator>>(Message &m, GetAudioFile &d);
 
     MessageHeader header;
 };

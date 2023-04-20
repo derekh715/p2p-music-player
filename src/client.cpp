@@ -12,22 +12,31 @@ std::map<peer_id, std::shared_ptr<tcp::socket>> Client::get_peers() {
 }
 
 void Client::on_connect(peer_id id) {
-    std::cout << "Overridden!!!" << std::endl;
     push_message(id, Message(MessageType::PING));
+}
+
+void Client::on_disconnect(peer_id id) {
+    std::cout << "Disconnected!" << std::endl;
 }
 
 void Client::populate_tracks() {
     // add this to the database (for the example network application)
-    Track t{.id = 3,
-            .album = "Example Album",
-            .artist = "Example Author",
-            .title = "Example Title",
-            .duration = 3500};
-    Track t1{.id = 4,
-             .album = "Another Example Album",
-             .artist = "Another Example Author",
-             .title = "Another Example Title",
-             .duration = 3500};
+    Track t{
+        .id = 3,
+        .album = "Example Album",
+        .artist = "Example Author",
+        .title = "Example Title",
+        .duration = 3500,
+        .checksum = "a3344",
+    };
+    Track t1{
+        .id = 4,
+        .album = "Another Example Album",
+        .artist = "Another Example Author",
+        .title = "Another Example Title",
+        .duration = 3500,
+        .checksum = "a3345",
+    };
     s.create(t);
     s.create(t1);
 }

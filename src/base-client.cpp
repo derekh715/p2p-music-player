@@ -11,6 +11,11 @@ BaseClient::BaseClient(uint16_t port, std::chrono::milliseconds time)
 }
 
 BaseClient::~BaseClient() {
+    // disconnect all sockets
+    for (auto &p : peers) {
+        p.second->shutdown(tcp::socket::shutdown_send);
+        p.second->close();
+    }
     // context, you can stop now!
     if (worker.joinable()) {
         worker.join();
@@ -34,8 +39,13 @@ void BaseClient::trap_signal() {
 void BaseClient::accept_socket() {
     acceptor.async_accept([&](asio::error_code const &ec, tcp::socket socket) {
         if (!ec) {
-            std::cout << "[ACCEPT SOCKET] New session: "
-                      << socket.remote_endpoint() << std::endl;
+            std::error_code remote_ec;
+            auto endpoint = socket.remote_endpoint(remote_ec);
+            if (remote_ec) {
+                return;
+            }
+            std::cout << "[ACCEPT SOCKET] New session: " << endpoint
+                      << std::endl;
             auto ptr = std::make_shared<tcp::socket>(std::move(socket));
             add_to_peers(std::shared_ptr<tcp::socket>(ptr));
             // connection is established, now we can wait
@@ -65,6 +75,7 @@ void BaseClient::add_to_peers(std::shared_ptr<tcp::socket> socket) {
 
 bool BaseClient::connect_to_peer(const std::string &host,
                                  const std::string &service) {
+    std::cout << "Trying to connect to " << host << ":" << service << std::endl;
     add_to_peers(std::make_shared<tcp::socket>(ctx));
     auto &p = peers[current_id - 1];
     std::error_code resolve_error;
@@ -184,6 +195,9 @@ void BaseClient::remove_socket(peer_id id) {
         auto rit = reverse.find(it->second);
         peers.erase(it);
         reverse.erase(rit);
+        it->second->shutdown(tcp::socket::shutdown_send);
+        it->second->close();
+        on_disconnect(id);
     }
 }
 
@@ -193,16 +207,24 @@ void BaseClient::remove_socket(std::shared_ptr<tcp::socket> socket) {
         auto rit = peers.find(it->second);
         reverse.erase(it);
         peers.erase(rit);
+        socket->shutdown(tcp::socket::shutdown_send);
+        socket->close();
+        on_disconnect(it->second);
     }
 }
 
 void BaseClient::remove_socket_by_ip(const std::string &address,
                                      uint16_t port) {
-    for (auto &p : peer_ip_map) {
-        if (p.second.address == address && p.second.port == port) {
-            remove_socket(p.first);
+    auto index = peer_ip_map.end();
+    for (auto it = peer_ip_map.begin(); it != peer_ip_map.end(); it++) {
+        if (it->second.address == address && it->second.port == port) {
+            remove_socket(it->first);
+            index = it;
             break;
         }
+    }
+    if (index != peer_ip_map.end()) {
+        peer_ip_map.erase(index);
     }
 }
 

@@ -188,3 +188,13 @@ Message &operator>>(Message &m, ReturnDatabase &d) {
     m >> d.tracks;
     return m;
 }
+
+Message &operator<<(Message &m, const GetAudioFile &d) {
+    m << d.checksum;
+    return m;
+}
+
+Message &operator>>(Message &m, GetAudioFile &d) {
+    m >> d.checksum;
+    return m;
+}

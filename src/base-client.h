@@ -45,6 +45,7 @@ class BaseClient {
      */
     bool connect_to_peer(const std::string &host, const std::string &service);
     virtual void on_connect(peer_id id) = 0;
+    virtual void on_disconnect(peer_id id) = 0;
 
     /*
      * this sends a message to ALL clients

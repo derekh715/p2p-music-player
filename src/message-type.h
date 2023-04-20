@@ -111,6 +111,13 @@ struct NoSuchPictureSegment {
     peer_id assigned_id_for_peer;
 };
 
+struct GetAudioFile {
+    std::string checksum;
+};
+
+struct HasAudioFile {};
+struct NoSuchAudioFile {};
+
 constexpr std::string_view get_message_name(MessageType mt) {
     switch (mt) {
     case MessageType::PING:

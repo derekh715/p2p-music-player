@@ -18,6 +18,7 @@ class Client : public BaseClient {
 
     void populate_tracks();
     void on_connect(peer_id id) override;
+    void on_disconnect(peer_id id) override;
 
     // handlers
     void handle_ping(MessageWithOwner &t);

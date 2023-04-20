@@ -1716,7 +1716,7 @@ void MyApplication::on_ButtonAddIp1_clicked() {
         // I added this line, so that when a new ip is added, it will attempt
         // to connect to that ip immediately
         // also on port 4000 because why not
-        if (smatch.size() == 3) {
+        if (smatch[2].length() != 0) {
             port_no = smatch[2];
         }
         // try to get the online database immediatey when the connection is
@@ -1789,7 +1789,8 @@ void MyApplication::start_client(uint16_t port) {
         // capturing MyApplication, don't know how much cpying is done
         // but who cares?
         port, [this](MessageWithOwner &t) { handle_message(t); },
-        [this](peer_id id) { on_connect(id); });
+        [this](peer_id id) { on_connect(id); },
+        [this](peer_id id) { on_disconnect(id); });
 }
 
 void MyApplication::handle_message(MessageWithOwner &t) {
@@ -1844,9 +1845,26 @@ void MyApplication::handle_message(MessageWithOwner &t) {
 }
 
 void MyApplication::on_connect(peer_id id) {
-    std::cout << "It is " << id << std::endl;
     Message m(MessageType::GET_DATABASE);
     client->push_message(id, m);
+}
+
+void MyApplication::on_disconnect(peer_id id) { remove_network_tracks(id); }
+
+void MyApplication::ask_client_for_file_with_this_checksum(
+    std::string checksum) {
+    Message m(MessageType::GET_AUDIO_FILE);
+    GetAudioFile gaf;
+    gaf.checksum = checksum;
+    m << gaf;
+    auto it = network_tracks.find(checksum);
+    // no file in the network tracks has this checksum
+    if (it == network_tracks.end()) {
+        return;
+    }
+    for (auto &id : it->second.ids) {
+        client->push_message(id, m);
+    }
 }
 
 // NOTE: this handler is invoked when ANOTHER PEER is getting your database
@@ -1869,11 +1887,40 @@ void MyApplication::handle_return_database(MessageWithOwner &t) {
     // append the tracks from peer to the network tracks vector
     for (auto &r : rd.tracks) {
         std::cout << r << std::endl;
-        TrackWithOwner two = {
-            .peer = t.id,
-            .track = r,
-        };
-        network_tracks.push_back(two);
+        // already has this track!
+        auto it = network_tracks.find(r.checksum);
+        if (it != network_tracks.end()) {
+            it->second.ids.push_back(t.id);
+        } else {
+            network_tracks[r.checksum] = {
+                .ids = {t.id},
+                .track = r,
+            };
+        }
+    }
+}
+
+void MyApplication::remove_network_tracks(peer_id id) {
+    std::cout << "[REMOVE NETWORK TRACKS] matching: " << id << std::endl;
+    for (auto it = network_tracks.begin(); it != network_tracks.end();) {
+        std::cout << it->second.track << std::endl;
+        std::cout << "Ids: ";
+        for (auto &id : it->second.ids) {
+            std::cout << id << " ";
+        }
+        std::cout << std::endl;
+        // remove that peer id from the ids array
+        it->second.ids.erase(
+            std::find(it->second.ids.begin(), it->second.ids.end(), id));
+        // if the array has no ids, that means no peer owns that track
+        // remove it
+        if (it->second.ids.empty()) {
+            std::cout << "Removed this record " << it->second.track
+                      << std::endl;
+            network_tracks.erase(it++);
+        } else {
+            ++it;
+        }
     }
 }
 

@@ -2,8 +2,10 @@
 
 ApplicationClient::ApplicationClient(
     uint16_t port, std::function<void(MessageWithOwner &)> handler,
-    std::function<void(peer_id)> connect)
-    : BaseClient(port), handler{handler}, connect_handler{connect} {
+    std::function<void(peer_id)> connect,
+    std::function<void(peer_id)> disconnect)
+    : BaseClient(port), handler{handler}, connect_handler{connect},
+      disconnect_handler{disconnect} {
     cycle();
 }
 
@@ -26,3 +28,4 @@ void ApplicationClient::cycle() {
 }
 
 void ApplicationClient::on_connect(peer_id id) { connect_handler(id); }
+void ApplicationClient::on_disconnect(peer_id id) { disconnect_handler(id); }

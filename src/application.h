@@ -40,8 +40,8 @@
 #include <taglib/id3v2tag.h>
 #include <taglib/tbytevector.h>
 
-struct TrackWithOwner {
-    peer_id peer;
+struct TrackWithOwners {
+    std::vector<peer_id> ids;
     Track track;
 };
 
@@ -316,15 +316,56 @@ private:
     Store store;
     uint16_t port;
     std::unique_ptr<ApplicationClient> client;
-    std::vector<TrackWithOwner> network_tracks;
+    /*
+     * it is a map of checksum to TrackWithOwners
+     * I am abusing the fact that md5 checksum has a very low collision probability
+     * the id field cannot be used since it comes from network databases
+     * so that id is only used for their local database, but not this database
+     * For example, if there is a track that looks like this:
+     * {
+     *  title = "Example Title",
+     *  checksum = "a345b678",
+     * } (this is just part of the data) that comes from peer 8
+     * then it will be store inside network_tracks like this:
+     * network_tracks["a345b678"] = {
+     *  track = { title = "Example Title", checksum = "a345b678" },
+     *  id = [8]
+     * }
+     *
+     * if for example peer 11 also has this file (i.e. a track record with the exact
+     * checksum), network_tracks will not be overridden with the new entry, instead
+     * this happens:
+     *
+     * network_tracks["a345b678"] = {
+     *  track = { title = "Example Title", checksum = "a345b678" },
+     *  id = [8, 11]
+     * }
+     * (provided that there are no bugs)
+     *
+     * whenever a client disconnect, let's say 8 quits, for ALL tracks in the
+     * network_tracks map, 8 will be removed from every id array, signifying that
+     * we have nothing from 8 anymore:
+     * network_tracks["a345b678"] = {
+     *  track = { title = "Example Title", checksum = "a345b678" },
+     *  id = [9]
+     * }
+     *
+     * when a track has no ids associated in it (the id array is empty), it will
+     * be automatically removed from the map, signifying that nobody owns that track
+     * network_tracks.find("a345b678") == network_tracks.end()
+     */
+    std::map<std::string, TrackWithOwners> network_tracks;
 
     Track convert_music_info_to_track(const MusicInfoCDT& m);
+    void remove_network_tracks(peer_id id);
     // this will start the TCP client
     // port is the port he will listen to
     void start_client(uint16_t port);
     // what to do when a connection is establiehd
     void on_connect(peer_id id);
+    void on_disconnect(peer_id id);
     void handle_message(MessageWithOwner &t);
+    void ask_client_for_file_with_this_checksum(std::string checksum);
     // void handle_get_track_info(MessageWithOwner &t);
     // void handle_return_track_info(MessageWithOwner &t);
     // void handle_no_such_track(MessageWithOwner &t);
