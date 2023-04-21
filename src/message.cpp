@@ -135,47 +135,47 @@ Message &operator>>(Message &m, NoSuchLyrics &d) {
 
 MessageHeader::MessageHeader(MessageType t) : type(t) {}
 
-Message &operator<<(Message &m, const PreparePictureSharing &d) {
-    m << d.which_one << d.assigned_id_for_peer;
+Message &operator<<(Message &m, const PrepareFileSharing &d) {
+    m << d.path << d.assigned_id_for_peer;
     return m;
 }
-Message &operator>>(Message &m, PreparePictureSharing &d) {
-    m >> d.assigned_id_for_peer >> d.which_one;
+Message &operator>>(Message &m, PrepareFileSharing &d) {
+    m >> d.assigned_id_for_peer >> d.path;
     return m;
 }
 
-Message &operator<<(Message &m, const GetPictureSegment &d) {
+Message &operator<<(Message &m, const GetSegment &d) {
     m << d.segment_id;
     return m;
 }
-Message &operator>>(Message &m, GetPictureSegment &d) {
+Message &operator>>(Message &m, GetSegment &d) {
     m >> d.segment_id;
     return m;
 }
 
-Message &operator<<(Message &m, const ReturnPictureSegment &d) {
+Message &operator<<(Message &m, const ReturnSegment &d) {
     m << d.body << d.segment_id << d.assigned_id_for_peer;
     return m;
 }
-Message &operator>>(Message &m, ReturnPictureSegment &d) {
+Message &operator>>(Message &m, ReturnSegment &d) {
     m >> d.assigned_id_for_peer >> d.segment_id >> d.body;
     return m;
 }
 
-Message &operator<<(Message &m, const NoSuchPictureSegment &d) {
+Message &operator<<(Message &m, const NoSuchSegment &d) {
     m << d.segment_id << d.assigned_id_for_peer;
     return m;
 }
-Message &operator>>(Message &m, NoSuchPictureSegment &d) {
+Message &operator>>(Message &m, NoSuchSegment &d) {
     m >> d.segment_id >> d.assigned_id_for_peer;
     return m;
 }
 
-Message &operator<<(Message &m, const PreparedPictureSharing &d) {
+Message &operator<<(Message &m, const PreparedFileSharing &d) {
     m << d.total_segments << d.assigned_id_for_peer;
     return m;
 }
-Message &operator>>(Message &m, PreparedPictureSharing &d) {
+Message &operator>>(Message &m, PreparedFileSharing &d) {
     m >> d.assigned_id_for_peer >> d.total_segments;
     return m;
 }

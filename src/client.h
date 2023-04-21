@@ -3,7 +3,7 @@
 
 #include "base-client.h"
 #include "chunked-file.h"
-#include "picture-sharing.h"
+#include "file-sharing.h"
 #include "store.h"
 #include <fstream>
 #include <iostream>
@@ -41,7 +41,7 @@ class Client : public BaseClient {
     void cycle();
     void additional_cycle_hook();
     void start_file_sharing();
-    PictureSharing ps;
+    FileSharing fs;
 
   private:
     Store s;

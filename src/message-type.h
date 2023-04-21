@@ -41,12 +41,12 @@ enum class MessageType : std::uint32_t {
     RETURN_AUDIO_SEGMENT,
 
     // the interleaving pictures example
-    PREPARE_PICTURE_SHARING,
-    PREPARED_PICTURE_SHARING,
-    HAS_PICTURE_FILE,
-    GET_PICTURE_SEGMENT,
-    RETURN_PICTURE_SEGMENT,
-    NO_SUCH_PICTURE_SEGMENT
+    PREPARE_FILE_SHARING,
+    PREPARED_FILE_SHARING,
+    HAS_FILE,
+    GET_SEGMENT,
+    RETURN_SEGMENT,
+    NO_SUCH_SEGMENT
 };
 
 struct ReturnDatabase {
@@ -86,27 +86,27 @@ struct PrepareAudioSharing {
     int remote_id_for_peer;
 };
 
-struct PreparePictureSharing {
-    int which_one;
+struct PrepareFileSharing {
+    std::string path;
     peer_id assigned_id_for_peer;
 };
 
-struct PreparedPictureSharing {
+struct PreparedFileSharing {
     int total_segments;
     peer_id assigned_id_for_peer;
 };
 
-struct GetPictureSegment {
+struct GetSegment {
     int segment_id;
 };
 
-struct ReturnPictureSegment {
+struct ReturnSegment {
     int segment_id;
     peer_id assigned_id_for_peer;
     std::vector<char> body;
 };
 
-struct NoSuchPictureSegment {
+struct NoSuchSegment {
     int segment_id;
     peer_id assigned_id_for_peer;
 };
@@ -150,16 +150,16 @@ constexpr std::string_view get_message_name(MessageType mt) {
         return "GET_AUDIO_SEGMENT";
     case MessageType::RETURN_AUDIO_SEGMENT:
         return "RETURN_AUDIO_SEGMENT";
-    case MessageType::PREPARE_PICTURE_SHARING:
-        return "PREPARE_PICTURE_SHARING";
-    case MessageType::PREPARED_PICTURE_SHARING:
-        return "PREPARED_PICTURE_SHARING";
-    case MessageType::GET_PICTURE_SEGMENT:
-        return "GET_PICTURE_SEGMENT";
-    case MessageType::RETURN_PICTURE_SEGMENT:
-        return "RETURN_PICTURE_SEGMENT";
-    case MessageType::NO_SUCH_PICTURE_SEGMENT:
-        return "NO_SUCH_PICTURE_SEGMENT";
+    case MessageType::PREPARE_FILE_SHARING:
+        return "PREPARE_FILE_SHARING";
+    case MessageType::PREPARED_FILE_SHARING:
+        return "PREPARED_FILE_SHARING";
+    case MessageType::GET_SEGMENT:
+        return "GET_SEGMENT";
+    case MessageType::RETURN_SEGMENT:
+        return "RETURN_SEGMENT";
+    case MessageType::NO_SUCH_SEGMENT:
+        return "NO_SUCH_SEGMENT";
     case MessageType::GET_DATABASE:
         return "GET_DATABASE";
     case MessageType::RETURN_DATABASE:

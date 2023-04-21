@@ -63,13 +63,20 @@ void get_lyrics_file(Client &c) {
 
 void ask_for_picture_file(Client &c) {
     std::cout << "Ask for the images!!!!" << std::endl;
-    c.ps.reset_sharing_file();
-    PreparePictureSharing pps;
+    c.fs.reset_sharing_file();
+    c.fs.open_file_for_writing("./interleaved.bmp");
+    PrepareFileSharing pfs;
     for (auto p : c.get_peers()) {
-        Message m(MessageType::PREPARE_PICTURE_SHARING);
-        pps.which_one = p.first;
-        pps.assigned_id_for_peer = c.ps.new_peer(p.first);
-        m << pps;
+        Message m(MessageType::PREPARE_FILE_SHARING);
+        pfs.assigned_id_for_peer = c.fs.new_peer(p.first);
+        // change this path if you start the application in a different
+        // directory
+        fs::path path("./src/tests/data");
+        char filename[30];
+        sprintf(filename, "1-%d.bmp", pfs.assigned_id_for_peer + 1);
+        path /= filename;
+        pfs.path = path;
+        m << pfs;
         c.push_message(p.first, m);
     }
 }

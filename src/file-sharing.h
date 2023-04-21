@@ -10,16 +10,16 @@
 
 using namespace std::literals;
 
-class PictureSharing {
+class FileSharing {
   public:
-    PictureSharing();
-    ~PictureSharing();
-    void open_file_for_writing();
+    FileSharing();
+    ~FileSharing();
+    void open_file_for_writing(const std::string &file);
     void reset_sharing_file();
     void try_writing_segment();
     int get_next_assigned_id();
 
-    void push_segment(ReturnPictureSegment rps);
+    void push_segment(ReturnSegment rps);
     int get_next_segment_id();
     bool all_segments_asked();
     int get_segment_count();
@@ -34,7 +34,7 @@ class PictureSharing {
     int get_peer_id(int assigned_id);
 
   private:
-    std::vector<std::queue<ReturnPictureSegment>> queue_buffer;
+    std::vector<std::queue<ReturnSegment>> queue_buffer;
     int current_segment_id = -1;
     int current_byte = 0;
     int current_writing_id = 0;
@@ -42,7 +42,7 @@ class PictureSharing {
     int current_assigned_id = -1;
     int total_segment_count;
 
-    void write_segment(const ReturnPictureSegment &rps);
+    void write_segment(const ReturnSegment &rps);
     // this flag will be for peer if it is idling (the queue is full) or
     // the there is no response from the peer
     std::vector<bool> waiting;

@@ -76,7 +76,7 @@ set(base_srcs util.cpp store.cpp base-client.cpp message.cpp store-types.cpp
 # p2pmss will be the executable that has the main function
 add_executable(p2pmss main.cpp application.cpp
   wav.cpp listfiles.cpp application-client.cpp ${base_srcs})
-add_executable(network network-example.cpp client.cpp picture-sharing.cpp ${base_srcs})
+add_executable(network network-example.cpp client.cpp file-sharing.cpp ${base_srcs})
 # we link p2pmss with the necessary libraries like gtkmm4
 target_link_libraries(p2pmss PRIVATE
   SQLiteCpp

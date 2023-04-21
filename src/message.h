@@ -146,20 +146,20 @@ class Message {
     friend Message &operator>>(Message &m, NoSuchLyrics &d);
 
     // all kinds of overoload for interleave
-    friend Message &operator<<(Message &m, const PreparePictureSharing &d);
-    friend Message &operator>>(Message &m, PreparePictureSharing &d);
+    friend Message &operator<<(Message &m, const PrepareFileSharing &d);
+    friend Message &operator>>(Message &m, PrepareFileSharing &d);
 
-    friend Message &operator<<(Message &m, const PreparedPictureSharing &d);
-    friend Message &operator>>(Message &m, PreparedPictureSharing &d);
+    friend Message &operator<<(Message &m, const PreparedFileSharing &d);
+    friend Message &operator>>(Message &m, PreparedFileSharing &d);
 
-    friend Message &operator<<(Message &m, const GetPictureSegment &d);
-    friend Message &operator>>(Message &m, GetPictureSegment &d);
+    friend Message &operator<<(Message &m, const GetSegment &d);
+    friend Message &operator>>(Message &m, GetSegment &d);
 
-    friend Message &operator<<(Message &m, const ReturnPictureSegment &d);
-    friend Message &operator>>(Message &m, ReturnPictureSegment &d);
+    friend Message &operator<<(Message &m, const ReturnSegment &d);
+    friend Message &operator>>(Message &m, ReturnSegment &d);
 
-    friend Message &operator<<(Message &m, const NoSuchPictureSegment &d);
-    friend Message &operator>>(Message &m, NoSuchPictureSegment &d);
+    friend Message &operator<<(Message &m, const NoSuchSegment &d);
+    friend Message &operator>>(Message &m, NoSuchSegment &d);
 
     friend Message &operator<<(Message &m, const GetAudioFile &d);
     friend Message &operator>>(Message &m, GetAudioFile &d);

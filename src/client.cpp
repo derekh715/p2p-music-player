@@ -157,25 +157,18 @@ void Client::handle_return_lyrics(MessageWithOwner &t) {
 
 void Client::handle_prepare_picture_sharing(MessageWithOwner &t) {
     // prepare chunked file
-    PreparePictureSharing pps;
-    t.msg >> pps;
-    std::cout << "Client " << t.id << " wants file " << pps.which_one
-              << std::endl;
-    assigned_peer_id = pps.assigned_id_for_peer;
+    PrepareFileSharing pfs;
+    t.msg >> pfs;
+    std::cout << "Client " << t.id << " wants file " << pfs.path << std::endl;
+    assigned_peer_id = pfs.assigned_id_for_peer;
 
-    // change this path if you start the application in a different
-    // directory
-    fs::path p("./src/tests/data");
-    char filename[30];
-    sprintf(filename, "1-%d.bmp", pps.which_one);
-    p /= filename;
     // send more things at once
-    cf.open_file(p, DEFAULT_CHUNK_SIZE * 2);
+    cf.open_file(pfs.path, DEFAULT_CHUNK_SIZE * 2);
     if (cf.failure()) {
         return;
     }
-    Message m(MessageType::PREPARED_PICTURE_SHARING);
-    PreparedPictureSharing pps2;
+    Message m(MessageType::PREPARED_FILE_SHARING);
+    PreparedFileSharing pps2;
     pps2.total_segments = cf.total_segments;
     pps2.assigned_id_for_peer = assigned_peer_id;
     m << pps2;
@@ -186,40 +179,40 @@ void Client::handle_prepared_picture_sharing(MessageWithOwner &t) {
     // we know that the peer will engage in sharing that file
     std::cout << "Client " << t.id << " is ready to send the file."
               << std::endl;
-    PreparedPictureSharing pps;
+    PreparedFileSharing pps;
     t.msg >> pps;
-    ps.set_segment_count(pps.total_segments);
-    Message m(MessageType::GET_PICTURE_SEGMENT);
-    GetPictureSegment gps;
-    gps.segment_id = ps.get_next_segment_id();
+    fs.set_segment_count(pps.total_segments);
+    Message m(MessageType::GET_SEGMENT);
+    GetSegment gps;
+    gps.segment_id = fs.get_next_segment_id();
     m << gps;
     push_message(t.id, m);
     std::cout << "Assigned id is " << pps.assigned_id_for_peer << std::endl;
-    ps.start_timeout(pps.assigned_id_for_peer);
+    fs.start_timeout(pps.assigned_id_for_peer);
 }
 
 void Client::handle_return_picture_segment(MessageWithOwner &t) {
-    ReturnPictureSegment rps;
+    ReturnSegment rps;
     t.msg >> rps;
-    ps.end_timeout(rps.assigned_id_for_peer);
+    fs.end_timeout(rps.assigned_id_for_peer);
     std::cout << "Segment " << rps.segment_id << "/"
-              << ps.get_segment_count() - 1 << " received from client " << t.id
+              << fs.get_segment_count() - 1 << " received from client " << t.id
               << " share id: " << rps.assigned_id_for_peer << std::endl;
-    ps.push_segment(rps);
-    Message m(MessageType::GET_PICTURE_SEGMENT);
+    fs.push_segment(rps);
+    Message m(MessageType::GET_SEGMENT);
     // it is enough
-    if (ps.all_segments_asked()) {
+    if (fs.all_segments_asked()) {
         return;
     }
-    GetPictureSegment gps;
-    gps.segment_id = ps.get_next_segment_id();
+    GetSegment gps;
+    gps.segment_id = fs.get_next_segment_id();
     m << gps;
-    ps.start_timeout(rps.assigned_id_for_peer);
+    fs.start_timeout(rps.assigned_id_for_peer);
     push_message(t.id, m);
 }
 
 void Client::handle_get_picture_segment(MessageWithOwner &t) {
-    GetPictureSegment gps;
+    GetSegment gps;
     t.msg >> gps;
     std::cout << "Segment " << gps.segment_id << "/" << cf.total_segments - 1
               << " requested by client " << t.id << std::endl;
@@ -227,18 +220,18 @@ void Client::handle_get_picture_segment(MessageWithOwner &t) {
     if (gps.segment_id >= cf.total_segments) {
         return;
     }
-    ReturnPictureSegment rps;
+    ReturnSegment rps;
     bool fine = cf.get(gps.segment_id, rps.body);
     if (!fine) {
         std::cout << "I cannot get this segment!" << std::endl;
-        NoSuchPictureSegment nsps;
+        NoSuchSegment nsps;
         nsps.assigned_id_for_peer = assigned_peer_id;
         nsps.segment_id = gps.segment_id;
-        Message m(MessageType::NO_SUCH_PICTURE_SEGMENT);
+        Message m(MessageType::NO_SUCH_SEGMENT);
         m << nsps;
     } else {
         std::cout << "Giving the segment back to client " << t.id << std::endl;
-        Message m(MessageType::RETURN_PICTURE_SEGMENT);
+        Message m(MessageType::RETURN_SEGMENT);
         rps.segment_id = gps.segment_id;
         rps.assigned_id_for_peer = assigned_peer_id;
         m << rps;
@@ -279,16 +272,16 @@ void Client::handle_message(MessageWithOwner &t) {
     case MessageType::RETURN_LYRICS:
         handle_return_lyrics(t);
         break;
-    case MessageType::PREPARE_PICTURE_SHARING:
+    case MessageType::PREPARE_FILE_SHARING:
         handle_prepare_picture_sharing(t);
         break;
-    case MessageType::PREPARED_PICTURE_SHARING:
+    case MessageType::PREPARED_FILE_SHARING:
         handle_prepared_picture_sharing(t);
         break;
-    case MessageType::RETURN_PICTURE_SEGMENT:
+    case MessageType::RETURN_SEGMENT:
         handle_return_picture_segment(t);
         break;
-    case MessageType::GET_PICTURE_SEGMENT:
+    case MessageType::GET_SEGMENT:
         handle_get_picture_segment(t);
         break;
     case MessageType::GET_DATABASE:
@@ -303,24 +296,24 @@ void Client::handle_message(MessageWithOwner &t) {
 }
 
 void Client::additional_cycle_hook() {
-    ps.try_writing_segment();
+    fs.try_writing_segment();
     // if some peer enters the waiting state
-    ps.if_waiting([this](int assigned_peer_id) {
-        Message m(MessageType::GET_PICTURE_SEGMENT);
+    fs.if_waiting([this](int assigned_peer_id) {
+        Message m(MessageType::GET_SEGMENT);
         // it is enough
-        if (ps.all_segments_asked()) {
+        if (fs.all_segments_asked()) {
             return;
         }
-        GetPictureSegment gps;
-        gps.segment_id = ps.get_next_segment_id();
+        GetSegment gps;
+        gps.segment_id = fs.get_next_segment_id();
         m << gps;
-        push_message(ps.get_peer_id(assigned_peer_id), m);
+        push_message(fs.get_peer_id(assigned_peer_id), m);
     });
 }
 
 void Client::start_file_sharing() {
-    ps.reset_sharing_file();
-    ps.open_file_for_writing();
+    fs.reset_sharing_file();
+    fs.open_file_for_writing("./interleaved.bmp");
 }
 
 void Client::cycle() {
