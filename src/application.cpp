@@ -572,9 +572,14 @@ void MyApplication::set_music_list() {
             _music->LRC = true;
             _music->LRCFilePath = lrcfilepath;
         }
+        _music->DurationInMilliseconds = r.second.track.duration;
+        _music->Duration = r.second.track.duration / 1000;
+        _music->DurationString = TimeString(_music->DurationInMilliseconds);
+
         _music->Album = r.second.track.album;
         _music->Artist = r.second.track.artist;
         _music->Title = r.second.track.title;
+        _music->SortTitle = _music->Title.lowercase();
         _music->Checksum = r.second.track.checksum;
         collected.push_back(convert_music_info_to_track(*_music));
         AllMusic->push_back(_music);
