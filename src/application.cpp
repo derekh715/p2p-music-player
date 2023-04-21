@@ -6,8 +6,8 @@
 
 struct MusicInfoCDT {
     Glib::ustring FileName = "", FilePath, SortFileName, SortTitle,
-                  DurationString = "99:59:59.999", Title = "", Album = "",
-                  Artist = "", Extension;
+        DurationString = "99:59:59.999", Title = "", Album = "",
+        Artist = "", Extension;
     std::string LRCFilePath = "";
     int Id = -1, Duration = 0, DurationInMilliseconds = 359999999,
         SortTitleAlphIndex = -1, SortArtistAlphIndex = -1,
@@ -15,22 +15,22 @@ struct MusicInfoCDT {
         SortFileNameAlphIndex = -1;
     Glib::RefPtr<Gdk::Pixbuf> pIcon;
     bool CoverArt = false, LRC = false, CanonicalWAV = true;
-
+    Glib::ustring Checksum = "";
     // for debugging purposes
-    friend std::ostream &operator<<(std::ostream &os, const MusicInfoCDT &m);
+    friend std::ostream& operator<<(std::ostream& os, const MusicInfoCDT& m);
 };
 
-std::ostream &operator<<(std::ostream &os, const MusicInfoCDT &m) {
+std::ostream& operator<<(std::ostream& os, const MusicInfoCDT& m) {
     std::cout << "For this MusicInfoCDT"
-              << "\nFileName: " << m.FileName << "\nFilePath: " << m.FilePath
-              << "\nExt: " << m.Extension
-              << "\nDurationString: " << m.DurationString
-              << "\nTitle: " << m.Title << "\nAlbum: " << m.Album
-              << "\nArtist: " << m.Artist << "\nDuration: " << m.Duration
-              << "\nDurationInMilliseconds: " << m.DurationInMilliseconds
-              << "\nCoverArt: " << m.CoverArt << "\nLRC: " << m.LRC
-              << "\nLRC Path: " << m.LRCFilePath << "\nId: " << m.Id
-              << std::endl;
+        << "\nFileName: " << m.FileName << "\nFilePath: " << m.FilePath
+        << "\nExt: " << m.Extension
+        << "\nDurationString: " << m.DurationString
+        << "\nTitle: " << m.Title << "\nAlbum: " << m.Album
+        << "\nArtist: " << m.Artist << "\nDuration: " << m.Duration
+        << "\nDurationInMilliseconds: " << m.DurationInMilliseconds
+        << "\nCoverArt: " << m.CoverArt << "\nLRC: " << m.LRC
+        << "\nLRC Path: " << m.LRCFilePath << "\nId: " << m.Id
+        << std::endl;
     return os;
 }
 
@@ -47,10 +47,10 @@ Glib::ustring MyApplication::TimeString(int time) {
     return Glib::ustring(text);
 }
 
-MyApplication::MyApplication(const std::string &file, uint16_t port)
+MyApplication::MyApplication(const std::string& file, uint16_t port)
     : store(false, file),
-      port(port), Gtk::Application("org.gtkmm.examples.application",
-                                   Gio::APPLICATION_HANDLES_OPEN) {
+    port(port), Gtk::Application("org.gtkmm.examples.application",
+        Gio::APPLICATION_HANDLES_OPEN) {
 
     gst_init(NULL, NULL);
 
@@ -60,7 +60,8 @@ MyApplication::MyApplication(const std::string &file, uint16_t port)
     // else it will assume you are invoking it from the project root
     if (std::filesystem::is_regular_file("src")) {
         resources->create_from_file("src")->register_global();
-    } else {
+    }
+    else {
         resources->create_from_file("src/src")->register_global();
     }
 
@@ -68,31 +69,35 @@ MyApplication::MyApplication(const std::string &file, uint16_t port)
     refBuilder = Gtk::Builder::create();
     try {
         refBuilder->add_from_resource("/my_app/layout");
-    } catch (const Glib::FileError &ex) {
+    }
+    catch (const Glib::FileError& ex) {
         std::cerr << "FileError: " << ex.what() << std::endl;
         exit(-1);
-    } catch (const Glib::MarkupError &ex) {
+    }
+    catch (const Glib::MarkupError& ex) {
         std::cerr << "MarkupError: " << ex.what() << std::endl;
         exit(-2);
-    } catch (const Gtk::BuilderError &ex) {
+    }
+    catch (const Gtk::BuilderError& ex) {
         std::cerr << "BuilderError: " << ex.what() << std::endl;
         exit(-3);
     }
 
     pAudioIcon = Glib::RefPtr<Gdk::Pixbuf>(
         Gdk::Pixbuf::create_from_resource("/my_app/audio_icon.png")
-            ->scale_simple(50, 50, Gdk::InterpType::INTERP_BILINEAR));
+        ->scale_simple(50, 50, Gdk::InterpType::INTERP_BILINEAR));
     pIcons = new std::vector<Glib::RefPtr<Gdk::Pixbuf>>(0);
-    for (const std::string &ext : exts) {
+    for (const std::string& ext : exts) {
         std::string icon_resource_path =
             "/my_app/" + ext.substr(1, ext.length() - 1);
         icon_resource_path += "_icon.png";
         if (Gio::Resource::get_file_exists_global_nothrow(icon_resource_path)) {
             Glib::RefPtr<Gdk::Pixbuf> pTypeIcon(
                 Gdk::Pixbuf::create_from_resource(icon_resource_path.c_str())
-                    ->scale_simple(50, 50, Gdk::InterpType::INTERP_BILINEAR));
+                ->scale_simple(50, 50, Gdk::InterpType::INTERP_BILINEAR));
             pIcons->push_back(pTypeIcon);
-        } else
+        }
+        else
             pIcons->push_back(pAudioIcon);
     }
 
@@ -102,12 +107,12 @@ MyApplication::MyApplication(const std::string &file, uint16_t port)
     start_client(port);
 }
 
-Glib::RefPtr<MyApplication> MyApplication::create(const std::string &filepath,
-                                                  uint16_t port) {
+Glib::RefPtr<MyApplication> MyApplication::create(const std::string& filepath,
+    uint16_t port) {
     return Glib::RefPtr<MyApplication>(new MyApplication(filepath, port));
 }
 
-Gtk::ApplicationWindow *MyApplication::create_appwindow() {
+Gtk::ApplicationWindow* MyApplication::create_appwindow() {
     pLogo = Glib::RefPtr<Gdk::Pixbuf>(
         Gdk::Pixbuf::create_from_resource("/my_app/music_player.png"));
     refBuilder->get_widget("ApplicationWindow1", pApplicationWindow1);
@@ -164,8 +169,8 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
         pFileChooserDialog1->add_button("Select", Gtk::RESPONSE_OK);
     pFileChooserDialog1->set_current_folder(DefaultDirectory);
     pHeaderBar1->set_title(std::filesystem::path(std::string(DefaultDirectory))
-                               .filename()
-                               .string());
+        .filename()
+        .string());
     pHeaderBar1->set_subtitle(DefaultDirectory);
 
     refBuilder->get_widget("FileChooserButton1", pFileChooserButton1);
@@ -241,7 +246,7 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
 
     refBuilder->get_widget("DrawingArea1", pDrawingArea1);
     pDrawingArea1->signal_draw().connect(
-        [this](const Cairo::RefPtr<Cairo::Context> &cr) -> bool {
+        [this](const Cairo::RefPtr<Cairo::Context>& cr) -> bool {
             return on_DrawingArea1_draw(cr, nullptr);
         });
 
@@ -257,16 +262,16 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
     pAdjustment1->set_upper(359999999);
     pAdjustment1->set_page_increment(1);
     pScrolledWindow1->set_policy(Gtk::PolicyType::POLICY_NEVER,
-                                 Gtk::PolicyType::POLICY_ALWAYS);
+        Gtk::PolicyType::POLICY_ALWAYS);
     pScrolledWindow1->add(*pTreeView1);
 
     pTreeModelColumnIcon = new Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>;
     pTreeModelColumnId = new Gtk::TreeModelColumn<int>;
     pTreeModelColumnTitle = new Gtk::TreeModelColumn<Glib::ustring>,
-    pTreeModelColumnTime = new Gtk::TreeModelColumn<Glib::ustring>,
-    pTreeModelColumnArtist = new Gtk::TreeModelColumn<Glib::ustring>,
-    pTreeModelColumnAlbum = new Gtk::TreeModelColumn<Glib::ustring>,
-    pTreeModelColumnFileName = new Gtk::TreeModelColumn<Glib::ustring>;
+        pTreeModelColumnTime = new Gtk::TreeModelColumn<Glib::ustring>,
+        pTreeModelColumnArtist = new Gtk::TreeModelColumn<Glib::ustring>,
+        pTreeModelColumnAlbum = new Gtk::TreeModelColumn<Glib::ustring>,
+        pTreeModelColumnFileName = new Gtk::TreeModelColumn<Glib::ustring>;
 
     pTreeModelColumnRecord1 = new Gtk::TreeModelColumnRecord;
     pTreeModelColumnRecord1->add(*pTreeModelColumnId);
@@ -286,7 +291,7 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
     pTreeView1->append_column("Album", *pTreeModelColumnAlbum);
     pTreeView1->append_column("Filename", *pTreeModelColumnFileName);
     for (int x = 0; x < pTreeView1->get_n_columns(); x++) {
-        Gtk::TreeViewColumn *col = pTreeView1->get_column(x);
+        Gtk::TreeViewColumn* col = pTreeView1->get_column(x);
         col->set_sizing(Gtk::TreeViewColumnSizing::TREE_VIEW_COLUMN_AUTOSIZE);
         col->set_alignment(0);
         col->set_sort_indicator(false);
@@ -297,7 +302,8 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
             col->set_sizing(
                 Gtk::TreeViewColumnSizing::TREE_VIEW_COLUMN_AUTOSIZE);
             col->set_resizable(true);
-        } else {
+        }
+        else {
             col->set_resizable(false);
             col->set_expand(false);
             col->set_sizing(Gtk::TreeViewColumnSizing::TREE_VIEW_COLUMN_FIXED);
@@ -325,7 +331,7 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
         sigc::mem_fun(*this, &MyApplication::on_EntryCompletion1_match));
     pEntryCompletion1->signal_match_selected().connect(
         sigc::mem_fun(*this,
-                      &MyApplication::on_EntryCompletion1_match_selected),
+            &MyApplication::on_EntryCompletion1_match_selected),
         false);
 
     CurrentMusic = new MusicInfoCDT;
@@ -381,9 +387,9 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
     MusicListChanged();
 
     pMenu1 = new Gtk::Menu();
-    pMenu1Items = new std::vector<Gtk::MenuItem *>(0);
+    pMenu1Items = new std::vector<Gtk::MenuItem*>(0);
     for (const Glib::ustring label : Menu1ItemLabels) {
-        Gtk::MenuItem *pMenu1Item = new Gtk::MenuItem(label);
+        Gtk::MenuItem* pMenu1Item = new Gtk::MenuItem(label);
         pMenu1Items->push_back(pMenu1Item);
         pMenu1->append(*pMenu1Item);
         pMenu1Item->signal_activate().connect(sigc::bind(
@@ -400,7 +406,7 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
         sigc::mem_fun(*this, &MyApplication::timeout1), 25,
         Glib::PRIORITY_HIGH_IDLE);
     pApplicationWindow1->signal_hide().connect(
-        sigc::bind<Gtk::ApplicationWindow *>(
+        sigc::bind<Gtk::ApplicationWindow*>(
             sigc::mem_fun(*this, &MyApplication::on_hide_window),
             pApplicationWindow1));
     pMessageDialog1->signal_response().connect(
@@ -456,7 +462,7 @@ Gtk::ApplicationWindow *MyApplication::create_appwindow() {
     pTreeSelection1->signal_changed().connect(
         sigc::mem_fun(*this, &MyApplication::on_TreeSelection1_changed));
     for (TreeViewColumns x = ICON; x <= FILENAME;
-         x = static_cast<TreeViewColumns>(x + 1))
+        x = static_cast<TreeViewColumns>(x + 1))
         pTreeView1->get_column(x)->signal_clicked().connect(
             sigc::bind(
                 sigc::mem_fun(*this, &MyApplication::on_TreeViewColumn_Clicked),
@@ -478,7 +484,7 @@ Glib::RefPtr<Gdk::Pixbuf>
 MyApplication::select_icon(const std::filesystem::path file_path) {
     std::string file_ext = file_path.extension().string();
     int counter = 0;
-    for (const std::string &ext : exts) {
+    for (const std::string& ext : exts) {
         if (file_ext == ext)
             return pIcons->at(counter);
         counter++;
@@ -491,7 +497,7 @@ void MyApplication::on_activate() {
     pApplicationWindow1->present();
 }
 
-void MyApplication::on_hide_window(Gtk::ApplicationWindow *pApplicationWindow) {
+void MyApplication::on_hide_window(Gtk::ApplicationWindow* pApplicationWindow) {
     delete pApplicationWindow;
 }
 
@@ -522,7 +528,7 @@ void MyApplication::set_music_list() {
     std::vector<std::filesystem::path> files_path = ListFiles::listfiles(
         Directory, exts, true, ShowFileInSubfolders, false);
     std::vector<Track> collected;
-    for (const std::filesystem::path &file_path : files_path) {
+    for (const std::filesystem::path& file_path : files_path) {
         MusicInfoADT _music = new MusicInfoCDT;
         std::string ext = file_path.extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
@@ -546,6 +552,35 @@ void MyApplication::set_music_list() {
         collected.push_back(convert_music_info_to_track(*_music));
         AllMusic->push_back(_music);
     }
+
+    for (auto& r : network_tracks) {
+        MusicInfoADT _music = new MusicInfoCDT;
+        std::string ext = std::filesystem::path(r.second.track.path).extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        _music->Extension = Glib::ustring(ext).lowercase();
+
+        _music->FileName = Glib::ustring(std::filesystem::path(r.second.track.path).filename().string());
+        _music->FileName =
+            _music->FileName.substr(0, _music->FileName.size() - ext.length());
+        _music->SortFileName = _music->FileName.lowercase();
+        std::string FilePath = "Network";
+        std::replace(FilePath.begin(), FilePath.end(), '\\', '/');
+        _music->FilePath = Glib::ustring(FilePath);
+        _music->pIcon = select_icon(std::filesystem::path(r.second.track.path));
+        std::string lrcfilepath = r.second.track.lrcfile;
+        if (lrcfilepath != "") {
+            _music->LRC = true;
+            _music->LRCFilePath = lrcfilepath;
+        }
+        _music->Album = r.second.track.album;
+        _music->Artist = r.second.track.artist;
+        _music->Title = r.second.track.title;
+        _music->Checksum = r.second.track.checksum;
+        collected.push_back(convert_music_info_to_track(*_music));
+        AllMusic->push_back(_music);
+    }
+
+
     std::thread add_tracks_in_background(
         [&collected, this]() { store.upsert_many(collected); });
     if (AllMusicCopy == nullptr)
@@ -565,7 +600,7 @@ void MyApplication::set_music_list() {
     add_tracks_in_background.join();
 }
 
-Track MyApplication::convert_music_info_to_track(const MusicInfoCDT &m) {
+Track MyApplication::convert_music_info_to_track(const MusicInfoCDT& m) {
     Track t;
     t.path = m.FilePath;
     t.album = m.Album;
@@ -615,7 +650,8 @@ void MyApplication::on_ButtonShuffle1_clicked() {
             pButtonShuffle1_Img->set_from_resource("/my_app/shuffle_on.png");
 
             Shuffle();
-        } else if (PlayMode == SHUFFLE_ON) {
+        }
+        else if (PlayMode == SHUFFLE_ON) {
             ShuffleOff();
         }
 }
@@ -631,22 +667,22 @@ void MyApplication::ShuffleOff() {
 }
 
 void MyApplication::ExtendAllMusicShuffled(bool CurrentMusicAtFront) {
-    std::vector<MusicInfoADT> *AllMusicShuffledNewSequence;
+    std::vector<MusicInfoADT>* AllMusicShuffledNewSequence;
     AllMusicShuffledNewSequence = new std::vector<MusicInfoADT>;
     *AllMusicShuffledNewSequence = *AllMusicCopy;
     std::shuffle(AllMusicShuffledNewSequence->begin(),
-                 AllMusicShuffledNewSequence->end(), RandomEngine);
+        AllMusicShuffledNewSequence->end(), RandomEngine);
     if (CurrentMusicAtFront && CurrentMusic->Id >= 0) {
         AllMusicShuffledNewSequence->erase(
             std::remove(AllMusicShuffledNewSequence->begin(),
-                        AllMusicShuffledNewSequence->end(), CurrentMusic),
+                AllMusicShuffledNewSequence->end(), CurrentMusic),
             AllMusicShuffledNewSequence->end());
         AllMusicShuffledNewSequence->insert(
             AllMusicShuffledNewSequence->begin(), CurrentMusic);
     }
     AllMusicShuffled->insert(AllMusicShuffled->end(),
-                             AllMusicShuffledNewSequence->begin(),
-                             AllMusicShuffledNewSequence->end());
+        AllMusicShuffledNewSequence->begin(),
+        AllMusicShuffledNewSequence->end());
     AllMusicShuffledSize += AllMusicShuffledNewSequence->size();
     delete AllMusicShuffledNewSequence;
 }
@@ -656,7 +692,7 @@ void MyApplication::on_ButtonBackward1_clicked() {
     PauseMusic();
     CurrentPosInMilliseconds =
         (CurrentPosInMilliseconds < 10000 ? 0
-                                          : CurrentPosInMilliseconds - 10000);
+            : CurrentPosInMilliseconds - 10000);
     pLabel1->set_text(TimeString(CurrentPosInMilliseconds));
     ScaleIsBeingMoved = true;
     pAdjustment1->set_value(CurrentPosInMilliseconds);
@@ -670,8 +706,8 @@ void MyApplication::on_ButtonForward1_clicked() {
     PauseMusic();
     CurrentPosInMilliseconds =
         (CurrentPosInMilliseconds + 30000 > CurrentMusic->DurationInMilliseconds
-             ? CurrentMusic->DurationInMilliseconds
-             : CurrentPosInMilliseconds + 30000);
+            ? CurrentMusic->DurationInMilliseconds
+            : CurrentPosInMilliseconds + 30000);
     pLabel1->set_text(TimeString(CurrentPosInMilliseconds));
     ScaleIsBeingMoved = true;
     pAdjustment1->set_value(CurrentPosInMilliseconds);
@@ -685,8 +721,8 @@ void MyApplication::on_ButtonPrevious1_clicked() {
         bool OriginalIsPlaying = IsPlaying;
         CurrentMusic =
             AllMusic->at((GetSortIndex(CurrentMusic, SortColumn, SortOrder) +
-                          AllMusic->size() - 1) %
-                         int(AllMusic->size()));
+                AllMusic->size() - 1) %
+                int(AllMusic->size()));
         ChangeMusic();
         if (OriginalIsPlaying)
             PlayMusic();
@@ -706,7 +742,7 @@ void MyApplication::on_ButtonNext1_clicked() {
         bool OriginalIsPlaying = IsPlaying;
         CurrentMusic = AllMusic->at(
             ((GetSortIndex(CurrentMusic, SortColumn, SortOrder) + 1) %
-             int(AllMusic->size())));
+                int(AllMusic->size())));
         ChangeMusic();
         if (OriginalIsPlaying)
             PlayMusic();
@@ -760,7 +796,7 @@ void MyApplication::on_ButtonSettings1_clicked() {
 void MyApplication::on_ButtonDialog2Cancel_clicked() { pDialog2->hide(); }
 void MyApplication::on_ButtonDialog2Save_clicked() {
     bool OriginalShowFileInSubfolders = ShowFileInSubfolders,
-         OriginalShowFileFromNetwork = ShowFileFromNetwork;
+        OriginalShowFileFromNetwork = ShowFileFromNetwork;
     ShowFileInSubfolders = pCheckButton1->get_active();
     ShowFileFromNetwork = pCheckButton2->get_active();
     pDialog2->hide();
@@ -824,11 +860,11 @@ void MyApplication::on_Menu1Item_activate(Glib::ustring Label) {
 }
 
 bool MyApplication::on_TreeView1_button_press_event(
-    GdkEventButton *button_event) {
+    GdkEventButton* button_event) {
     if (!TreeViewColumnClicked) {
         if ((button_event->type == GDK_BUTTON_PRESS) &&
             (button_event->button == 3))
-            pMenu1->popup_at_pointer((GdkEvent *)button_event);
+            pMenu1->popup_at_pointer((GdkEvent*)button_event);
 
         if ((button_event->type == GDK_2BUTTON_PRESS)) {
             ShuffleOff();
@@ -843,7 +879,7 @@ bool MyApplication::on_TreeView1_button_press_event(
     return false;
 }
 
-bool MyApplication::on_Scale1_press_event(GdkEventButton *event) {
+bool MyApplication::on_Scale1_press_event(GdkEventButton* event) {
     if (state == PLAYING) {
         SystemTogglingPlayButton = true;
         PauseMusic();
@@ -853,7 +889,7 @@ bool MyApplication::on_Scale1_press_event(GdkEventButton *event) {
     return false;
 }
 
-bool MyApplication::on_Scale1_release_event(GdkEventButton *event) {
+bool MyApplication::on_Scale1_release_event(GdkEventButton* event) {
     ScaleIsBeingMoved = false;
     return false;
 }
@@ -869,30 +905,30 @@ void MyApplication::on_Adjustment1_changed() {
 void MyApplication::taglib_get_data(MusicInfoADT _music) {
     TagLib::FileRef f(_music->FilePath.c_str());
     _music->Title = Glib::ustring((!(f.tag()->title().to8Bit(true).empty())
-                                       ? f.tag()->title().to8Bit(true)
-                                       : "None"));
+        ? f.tag()->title().to8Bit(true)
+        : "None"));
     _music->SortTitle = _music->Title.lowercase();
     _music->Album = Glib::ustring((!(f.tag()->album().to8Bit(true).empty())
-                                       ? f.tag()->album().to8Bit(true)
-                                       : "None"));
+        ? f.tag()->album().to8Bit(true)
+        : "None"));
     _music->Artist = Glib::ustring((!(f.tag()->artist().to8Bit(true).empty())
-                                        ? f.tag()->artist().to8Bit(true)
-                                        : "None"));
+        ? f.tag()->artist().to8Bit(true)
+        : "None"));
     _music->Duration = f.audioProperties()->length();
     _music->DurationInMilliseconds =
         f.audioProperties()->lengthInMilliseconds();
     _music->DurationString = TimeString(_music->DurationInMilliseconds);
     if (_music->Extension == ".mp3")
-        _music->CoverArt = !(dynamic_cast<TagLib::MPEG::File *>(f.file())
-                                 ->ID3v2Tag()
-                                 ->frameListMap()["APIC"]
-                                 .isEmpty());
+        _music->CoverArt = !(dynamic_cast<TagLib::MPEG::File*>(f.file())
+            ->ID3v2Tag()
+            ->frameListMap()["APIC"]
+            .isEmpty());
     else if (_music->Extension == ".m4a")
-        _music->CoverArt = !(dynamic_cast<TagLib::MP4::File *>(f.file())
-                                 ->tag()
-                                 ->item("covr")
-                                 .toCoverArtList()
-                                 .isEmpty());
+        _music->CoverArt = !(dynamic_cast<TagLib::MP4::File*>(f.file())
+            ->tag()
+            ->item("covr")
+            .toCoverArtList()
+            .isEmpty());
     else
         _music->CoverArt = false;
 }
@@ -903,10 +939,10 @@ void MyApplication::on_TreeViewColumn_Clicked(TreeViewColumns NewSortColumn) {
         resorting = true;
         Gtk::SortType NewSortOrder =
             (SortColumn == NewSortColumn
-                 ? (SortOrder == Gtk::SortType::SORT_ASCENDING
-                        ? Gtk::SortType::SORT_DESCENDING
-                        : Gtk::SortType::SORT_ASCENDING)
-                 : Gtk::SortType::SORT_ASCENDING);
+                ? (SortOrder == Gtk::SortType::SORT_ASCENDING
+                    ? Gtk::SortType::SORT_DESCENDING
+                    : Gtk::SortType::SORT_ASCENDING)
+                : Gtk::SortType::SORT_ASCENDING);
         SortColumn = NewSortColumn;
         SortMusicListByIndex(NewSortColumn, NewSortOrder);
         for (int x = 0; x < pTreeView1->get_n_columns(); x++)
@@ -924,7 +960,7 @@ void MyApplication::on_TreeViewColumn_Clicked(TreeViewColumns NewSortColumn) {
 }
 
 int MyApplication::GetSortIndex(MusicInfoADT _music, TreeViewColumns SortColumn,
-                                Gtk::SortType SortOrder) {
+    Gtk::SortType SortOrder) {
     int index = -1;
     switch (SortColumn) {
     case TITLE:
@@ -944,8 +980,8 @@ int MyApplication::GetSortIndex(MusicInfoADT _music, TreeViewColumns SortColumn,
         break;
     }
     return (SortOrder == Gtk::SortType::SORT_ASCENDING
-                ? index
-                : (AllMusicCopy->size() - 1 - index));
+        ? index
+        : (AllMusicCopy->size() - 1 - index));
 }
 
 void MyApplication::LoadMusic() {
@@ -974,11 +1010,11 @@ void MyApplication::LoadMusic() {
         gst_element_add_pad(bin, ghost_pad);
         gst_object_unref(pad);
         g_object_set(G_OBJECT(spectrum), "bands", 128, "interval", 50000000,
-                     NULL);
+            NULL);
 
         g_object_set(GST_OBJECT(pipeline), "audio-sink", bin, NULL);
 
-        char *cwd = getcwd(cwd, 0); // ???
+        char* cwd = getcwd(cwd, 0); // ???
         // if(false) Glib::setenv("", NULL, 0); // ???
     }
 }
@@ -989,10 +1025,10 @@ void MyApplication::ChangeMusic() {
     pLabelTitle1->set_label("Title:\t" + PrettyString(CurrentMusic->Title, 30));
     pLabelDuration1->set_label("Duration:\t" + CurrentMusic->DurationString);
     pLabelArtist1->set_label("Artist:\t" +
-                             PrettyString(CurrentMusic->Artist, 30));
+        PrettyString(CurrentMusic->Artist, 30));
     pLabelAlbum1->set_label("Album:\t" + PrettyString(CurrentMusic->Album, 30));
     pLabelFileName1->set_label("Filename:\t" +
-                               PrettyString(CurrentMusic->FileName, 30));
+        PrettyString(CurrentMusic->FileName, 30));
 
     CurrentPosInMilliseconds = 0;
     PlayedInMilliseconds = 0;
@@ -1010,7 +1046,8 @@ void MyApplication::ChangeMusic() {
             Lyrics = LrcFile->GetAllLyrics();
             ResetLyric();
 
-        } else {
+        }
+        else {
             LyricIndex = 0;
             LyricEndtime = 0;
         }
@@ -1060,14 +1097,15 @@ void MyApplication::PlayMusic() {
                 GstNeedSeek = false;
             }
             gst_stream_volume_set_volume(GST_STREAM_VOLUME(pipeline),
-                                         GST_STREAM_VOLUME_FORMAT_LINEAR,
-                                         Volume);
+                GST_STREAM_VOLUME_FORMAT_LINEAR,
+                Volume);
             GstVolumeChanged = false;
 
             gst_element_set_state(pipeline, GST_STATE_PLAYING);
             bus = gst_element_get_bus(pipeline);
 
-        } else {
+        }
+        else {
             std::string command =
                 "appsrc name=src ! rawaudioparse  format=pcm num-channels=" +
                 std::to_string(wav->getNumChannels()) +
@@ -1079,8 +1117,8 @@ void MyApplication::PlayMusic() {
                 "--gst-debug=2";
             pipeline = gst_parse_launch(command.c_str(), NULL);
             appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "src");
-            volume = (GstStreamVolume *)gst_bin_get_by_name(GST_BIN(pipeline),
-                                                            "vol");
+            volume = (GstStreamVolume*)gst_bin_get_by_name(GST_BIN(pipeline),
+                "vol");
 
             const int MaxBufSize = 2048;
             int pos = 0, bufSize = 0;
@@ -1099,11 +1137,11 @@ void MyApplication::PlayMusic() {
                     bufSize = offsetChunkSize - pos;
                     Continue = false;
                 }
-                GstBuffer *buffer =
+                GstBuffer* buffer =
                     gst_buffer_new_allocate(NULL, bufSize, NULL);
 
                 gst_buffer_fill(buffer, 0, wav->getData() + offset + pos,
-                                bufSize);
+                    bufSize);
 
                 gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);
                 pos += MaxBufSize;
@@ -1120,70 +1158,71 @@ void MyApplication::PlayMusic() {
             gst_element_set_state(pipeline, GST_STATE_PLAYING);
             bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
         }
-    } else
+    }
+    else
         PauseMusic();
 }
 
 void MyApplication::SortMusicListByIndex(TreeViewColumns SortColumn,
-                                         Gtk::SortType SortOrder) {
+    Gtk::SortType SortOrder) {
     switch (SortColumn) {
     case TITLE:
         std::sort(AllMusic->begin(), AllMusic->end(),
-                  (SortOrder == Gtk::SortType::SORT_ASCENDING
-                       ? CompareByTitleAlphabeticalOrderIndexAscending
-                       : CompareByTitleAlphabeticalOrderIndexDescending));
+            (SortOrder == Gtk::SortType::SORT_ASCENDING
+                ? CompareByTitleAlphabeticalOrderIndexAscending
+                : CompareByTitleAlphabeticalOrderIndexDescending));
         break;
     case TIME:
         std::sort(AllMusic->begin(), AllMusic->end(),
-                  (SortOrder == Gtk::SortType::SORT_ASCENDING
-                       ? CompareByDurationInMillisecondsIndexAscending
-                       : CompareByDurationInMillisecondsIndexDescending));
+            (SortOrder == Gtk::SortType::SORT_ASCENDING
+                ? CompareByDurationInMillisecondsIndexAscending
+                : CompareByDurationInMillisecondsIndexDescending));
         break;
     case ARTIST:
         std::sort(AllMusic->begin(), AllMusic->end(),
-                  (SortOrder == Gtk::SortType::SORT_ASCENDING
-                       ? CompareByArtistAlphabeticalOrderIndexAscending
-                       : CompareByArtistAlphabeticalOrderIndexDescending));
+            (SortOrder == Gtk::SortType::SORT_ASCENDING
+                ? CompareByArtistAlphabeticalOrderIndexAscending
+                : CompareByArtistAlphabeticalOrderIndexDescending));
         break;
     case ALBUM:
         std::sort(AllMusic->begin(), AllMusic->end(),
-                  (SortOrder == Gtk::SortType::SORT_ASCENDING
-                       ? CompareByAlbumAlphabeticalOrderIndexAscending
-                       : CompareByAlbumAlphabeticalOrderIndexDescending));
+            (SortOrder == Gtk::SortType::SORT_ASCENDING
+                ? CompareByAlbumAlphabeticalOrderIndexAscending
+                : CompareByAlbumAlphabeticalOrderIndexDescending));
         break;
     case FILENAME:
         std::sort(AllMusic->begin(), AllMusic->end(),
-                  (SortOrder == Gtk::SortType::SORT_ASCENDING
-                       ? CompareByFileNameAlphabeticalOrderIndexAscending
-                       : CompareByFileNameAlphabeticalOrderIndexDescending));
+            (SortOrder == Gtk::SortType::SORT_ASCENDING
+                ? CompareByFileNameAlphabeticalOrderIndexAscending
+                : CompareByFileNameAlphabeticalOrderIndexDescending));
         break;
     }
 }
 
-bool MyApplication::CompareByTitleAlphabeticalOrder(const MusicInfoADT &a,
-                                                    const MusicInfoADT &b) {
+bool MyApplication::CompareByTitleAlphabeticalOrder(const MusicInfoADT& a,
+    const MusicInfoADT& b) {
     return (a->SortTitle < b->SortTitle);
 }
 
 void MyApplication::SortMusicListByTitleAlphabeticalOrder() {
     std::sort(AllMusic->begin(), AllMusic->end(),
-              CompareByTitleAlphabeticalOrder);
+        CompareByTitleAlphabeticalOrder);
     for (int counter = 0; counter < AllMusic->size(); counter++)
         AllMusic->at(counter)->SortTitleAlphIndex = counter;
 }
 
 bool MyApplication::CompareByTitleAlphabeticalOrderIndexAscending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortTitleAlphIndex < b->SortTitleAlphIndex);
 }
 
 bool MyApplication::CompareByTitleAlphabeticalOrderIndexDescending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortTitleAlphIndex > b->SortTitleAlphIndex);
 }
 
-bool MyApplication::CompareByDurationInMilliseconds(const MusicInfoADT &a,
-                                                    const MusicInfoADT &b) {
+bool MyApplication::CompareByDurationInMilliseconds(const MusicInfoADT& a,
+    const MusicInfoADT& b) {
     if (a->DurationInMilliseconds != b->DurationInMilliseconds)
         return (a->DurationInMilliseconds < b->DurationInMilliseconds);
     else
@@ -1192,25 +1231,25 @@ bool MyApplication::CompareByDurationInMilliseconds(const MusicInfoADT &a,
 
 void MyApplication::SortMusicListByDurationInMilliseconds() {
     std::sort(AllMusic->begin(), AllMusic->end(),
-              CompareByDurationInMilliseconds);
+        CompareByDurationInMilliseconds);
     for (int counter = 0; counter < AllMusic->size(); counter++)
         AllMusic->at(counter)->SortDurationInMillisecondsIndex = counter;
 }
 
 bool MyApplication::CompareByDurationInMillisecondsIndexAscending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortDurationInMillisecondsIndex <
-            b->SortDurationInMillisecondsIndex);
+        b->SortDurationInMillisecondsIndex);
 }
 
 bool MyApplication::CompareByDurationInMillisecondsIndexDescending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortDurationInMillisecondsIndex >
-            b->SortDurationInMillisecondsIndex);
+        b->SortDurationInMillisecondsIndex);
 }
 
-bool MyApplication::CompareByAlbumAlphabeticalOrder(const MusicInfoADT &a,
-                                                    const MusicInfoADT &b) {
+bool MyApplication::CompareByAlbumAlphabeticalOrder(const MusicInfoADT& a,
+    const MusicInfoADT& b) {
     if (a->Album != b->Album)
         return (a->Album.lowercase()) < (b->Album.lowercase());
     else
@@ -1219,23 +1258,23 @@ bool MyApplication::CompareByAlbumAlphabeticalOrder(const MusicInfoADT &a,
 
 void MyApplication::SortMusicListByAlbumAlphabeticalOrder() {
     std::sort(AllMusic->begin(), AllMusic->end(),
-              CompareByAlbumAlphabeticalOrder);
+        CompareByAlbumAlphabeticalOrder);
     for (int counter = 0; counter < AllMusic->size(); counter++)
         AllMusic->at(counter)->SortAlbumAlphIndex = counter;
 }
 
 bool MyApplication::CompareByAlbumAlphabeticalOrderIndexAscending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortAlbumAlphIndex < b->SortAlbumAlphIndex);
 }
 
 bool MyApplication::CompareByAlbumAlphabeticalOrderIndexDescending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortAlbumAlphIndex > b->SortAlbumAlphIndex);
 }
 
-bool MyApplication::CompareByArtistAlphabeticalOrder(const MusicInfoADT &a,
-                                                     const MusicInfoADT &b) {
+bool MyApplication::CompareByArtistAlphabeticalOrder(const MusicInfoADT& a,
+    const MusicInfoADT& b) {
     if (a->Artist != b->Artist)
         return (a->Artist.lowercase()) < (b->Artist.lowercase());
     else
@@ -1244,40 +1283,40 @@ bool MyApplication::CompareByArtistAlphabeticalOrder(const MusicInfoADT &a,
 
 void MyApplication::SortMusicListByArtistAlphabeticalOrder() {
     std::sort(AllMusic->begin(), AllMusic->end(),
-              CompareByArtistAlphabeticalOrder);
+        CompareByArtistAlphabeticalOrder);
     for (int counter = 0; counter < AllMusic->size(); counter++)
         AllMusic->at(counter)->SortArtistAlphIndex = counter;
 }
 
 bool MyApplication::CompareByArtistAlphabeticalOrderIndexAscending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortArtistAlphIndex < b->SortArtistAlphIndex);
 }
 
 bool MyApplication::CompareByArtistAlphabeticalOrderIndexDescending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortArtistAlphIndex > b->SortArtistAlphIndex);
 }
 
-bool MyApplication::CompareByFileNameAlphabeticalOrder(const MusicInfoADT &a,
-                                                       const MusicInfoADT &b) {
+bool MyApplication::CompareByFileNameAlphabeticalOrder(const MusicInfoADT& a,
+    const MusicInfoADT& b) {
     return (a->SortFileName < b->SortFileName);
 }
 
 void MyApplication::SortMusicListByFileNameAlphabeticalOrder() {
     std::sort(AllMusic->begin(), AllMusic->end(),
-              CompareByFileNameAlphabeticalOrder);
+        CompareByFileNameAlphabeticalOrder);
     for (int counter = 0; counter < AllMusic->size(); counter++)
         AllMusic->at(counter)->SortFileNameAlphIndex = counter;
 }
 
 bool MyApplication::CompareByFileNameAlphabeticalOrderIndexAscending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortFileNameAlphIndex < b->SortFileNameAlphIndex);
 }
 
 bool MyApplication::CompareByFileNameAlphabeticalOrderIndexDescending(
-    const MusicInfoADT &a, const MusicInfoADT &b) {
+    const MusicInfoADT& a, const MusicInfoADT& b) {
     return (a->SortFileNameAlphIndex > b->SortFileNameAlphIndex);
 }
 
@@ -1287,39 +1326,42 @@ bool MyApplication::timeout1() {
         if (GstVolumeChanged) {
             if (CurrentMusic->Extension != ".wav" ||
                 !CurrentMusic->CanonicalWAV)
-                gst_stream_volume_set_volume((GstStreamVolume *)(pipeline),
-                                             GST_STREAM_VOLUME_FORMAT_LINEAR,
-                                             Volume);
+                gst_stream_volume_set_volume((GstStreamVolume*)(pipeline),
+                    GST_STREAM_VOLUME_FORMAT_LINEAR,
+                    Volume);
             else
                 g_object_set(volume, "volume", Volume, NULL);
             GstVolumeChanged = false;
         }
         msg = gst_bus_timed_pop_filtered(bus, 0 * GST_MSECOND,
-                                         GstMessageType(GST_MESSAGE_ERROR |
-                                                        GST_MESSAGE_EOS |
-                                                        GST_MESSAGE_ELEMENT));
+            GstMessageType(GST_MESSAGE_ERROR |
+                GST_MESSAGE_EOS |
+                GST_MESSAGE_ELEMENT));
         if (msg != NULL && GST_MESSAGE_TYPE(msg) == GST_MESSAGE_EOS) {
             if (PlayMode == SINGLE) {
                 PauseMusic();
                 pAdjustment1->set_value(0);
-            } else
+            }
+            else
                 on_ButtonNext1_clicked();
             gst_message_unref(msg);
-        } else {
+        }
+        else {
             if (msg != NULL && GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ELEMENT) {
-                const GstStructure *s = gst_message_get_structure(msg);
+                const GstStructure* s = gst_message_get_structure(msg);
                 update_spectrum_data(s);
                 gst_message_unref(msg);
-            } else if (msg != NULL)
+            }
+            else if (msg != NULL)
                 gst_message_unref(msg);
 
             gst_element_query_position(pipeline, GST_FORMAT_TIME,
-                                       &CurrentPosInMilliseconds);
+                &CurrentPosInMilliseconds);
             CurrentPosInMilliseconds /= 1000000;
             pLabel1->set_text(
                 TimeString(PlayedInMilliseconds + CurrentPosInMilliseconds));
             pAdjustment1->set_value(PlayedInMilliseconds +
-                                    CurrentPosInMilliseconds);
+                CurrentPosInMilliseconds);
             if (CurrentMusic->LRC && CurrentPosInMilliseconds > LyricEndtime &&
                 LyricIndex != Lyrics.size() - 1) {
                 LyricIndex++;
@@ -1337,32 +1379,32 @@ void MyApplication::DisplayCoverArtSidebar() {
     if (CurrentMusic->CoverArt && CurrentMusic->Extension == ".mp3") {
         auto file = TagLib::MPEG::File(CurrentMusic->FilePath.c_str());
         auto AttachedPictureFrame =
-            (TagLib::ID3v2::AttachedPictureFrame *)*file.ID3v2Tag()
-                ->frameListMap()["APIC"]
-                .begin();
+            (TagLib::ID3v2::AttachedPictureFrame*)*file.ID3v2Tag()
+            ->frameListMap()["APIC"]
+            .begin();
         std::string CoverArtFileName;
         if (AttachedPictureFrame->mimeType() == "image/jpeg")
             CoverArtFileName = "CoverArt.jpg";
         else if (AttachedPictureFrame->mimeType() == "image/png")
             CoverArtFileName = "CoverArt.png";
         std::ofstream fout(CoverArtFileName.c_str(),
-                           std::ios::out | std::ios::binary);
-        fout.write((const char *)AttachedPictureFrame->picture().data(),
-                   AttachedPictureFrame->picture().size());
+            std::ios::out | std::ios::binary);
+        fout.write((const char*)AttachedPictureFrame->picture().data(),
+            AttachedPictureFrame->picture().size());
         fout.close();
         pImageCoverArt1->set(Glib::RefPtr<Gdk::Pixbuf>(
             Gdk::Pixbuf::create_from_file(CoverArtFileName)
-                ->scale_simple(100, 100, Gdk::InterpType::INTERP_BILINEAR)));
+            ->scale_simple(100, 100, Gdk::InterpType::INTERP_BILINEAR)));
         std::filesystem::remove(CoverArtFileName);
     }
 
     else if (CurrentMusic->CoverArt && CurrentMusic->Extension == ".m4a") {
         TagLib::MP4::CoverArt CoverArt =
             TagLib::MP4::File(CurrentMusic->FilePath.c_str())
-                .tag()
-                ->item("covr")
-                .toCoverArtList()
-                .front();
+            .tag()
+            ->item("covr")
+            .toCoverArtList()
+            .front();
         std::string CoverArtFileName;
         switch (CoverArt.format()) {
         case TagLib::MP4::CoverArt::Format::BMP:
@@ -1379,12 +1421,12 @@ void MyApplication::DisplayCoverArtSidebar() {
             break;
         }
         std::ofstream fout(CoverArtFileName.c_str(),
-                           std::ios::out | std::ios::binary);
+            std::ios::out | std::ios::binary);
         fout.write(CoverArt.data().data(), CoverArt.data().size());
         fout.close();
         pImageCoverArt1->set(Glib::RefPtr<Gdk::Pixbuf>(
             Gdk::Pixbuf::create_from_file(CoverArtFileName)
-                ->scale_simple(100, 100, Gdk::InterpType::INTERP_BILINEAR)));
+            ->scale_simple(100, 100, Gdk::InterpType::INTERP_BILINEAR)));
         std::filesystem::remove(CoverArtFileName);
     }
 
@@ -1396,32 +1438,32 @@ void MyApplication::DisplayCoverArtDialog1() {
     if (SelectedMusic->CoverArt && SelectedMusic->Extension == ".mp3") {
         auto file = TagLib::MPEG::File(SelectedMusic->FilePath.c_str());
         auto AttachedPictureFrame =
-            (TagLib::ID3v2::AttachedPictureFrame *)*file.ID3v2Tag()
-                ->frameListMap()["APIC"]
-                .begin();
+            (TagLib::ID3v2::AttachedPictureFrame*)*file.ID3v2Tag()
+            ->frameListMap()["APIC"]
+            .begin();
         std::string CoverArtFileName;
         if (AttachedPictureFrame->mimeType() == "image/jpeg")
             CoverArtFileName = "CoverArt.jpg";
         else if (AttachedPictureFrame->mimeType() == "image/png")
             CoverArtFileName = "CoverArt.png";
         std::ofstream fout(CoverArtFileName.c_str(),
-                           std::ios::out | std::ios::binary);
-        fout.write((const char *)AttachedPictureFrame->picture().data(),
-                   AttachedPictureFrame->picture().size());
+            std::ios::out | std::ios::binary);
+        fout.write((const char*)AttachedPictureFrame->picture().data(),
+            AttachedPictureFrame->picture().size());
         fout.close();
         pImageCoverArt2->set(Glib::RefPtr<Gdk::Pixbuf>(
             Gdk::Pixbuf::create_from_file(CoverArtFileName)
-                ->scale_simple(400, 400, Gdk::InterpType::INTERP_BILINEAR)));
+            ->scale_simple(400, 400, Gdk::InterpType::INTERP_BILINEAR)));
         std::filesystem::remove(CoverArtFileName);
     }
 
     else if (SelectedMusic->CoverArt && SelectedMusic->Extension == ".m4a") {
         TagLib::MP4::CoverArt CoverArt =
             TagLib::MP4::File(SelectedMusic->FilePath.c_str())
-                .tag()
-                ->item("covr")
-                .toCoverArtList()
-                .front();
+            .tag()
+            ->item("covr")
+            .toCoverArtList()
+            .front();
         std::string CoverArtFileName;
         switch (CoverArt.format()) {
         case TagLib::MP4::CoverArt::Format::BMP:
@@ -1438,12 +1480,12 @@ void MyApplication::DisplayCoverArtDialog1() {
             break;
         }
         std::ofstream fout(CoverArtFileName.c_str(),
-                           std::ios::out | std::ios::binary);
+            std::ios::out | std::ios::binary);
         fout.write(CoverArt.data().data(), CoverArt.data().size());
         fout.close();
         pImageCoverArt2->set(Glib::RefPtr<Gdk::Pixbuf>(
             Gdk::Pixbuf::create_from_file(CoverArtFileName)
-                ->scale_simple(400, 400, Gdk::InterpType::INTERP_BILINEAR)));
+            ->scale_simple(400, 400, Gdk::InterpType::INTERP_BILINEAR)));
         std::filesystem::remove(CoverArtFileName);
     }
 
@@ -1454,34 +1496,35 @@ void MyApplication::DisplayCoverArtDialog1() {
 void MyApplication::on_ButtonDialog1Cancel_clicked() { pDialog1->hide(); }
 void MyApplication::on_ButtonDialog1Save_clicked() {
     std::string NewTitle = std::string(pEntryTitle1->get_text()),
-                NewArtist = std::string(pEntryArtist1->get_text()),
-                NewAlbum = std::string(pEntryAlbum1->get_text()),
-                NewFileName = std::string(pEntryFileName1->get_text());
+        NewArtist = std::string(pEntryArtist1->get_text()),
+        NewAlbum = std::string(pEntryAlbum1->get_text()),
+        NewFileName = std::string(pEntryFileName1->get_text());
 
     boost::smatch smatch;
     if (boost::regex_match(NewTitle, smatch, boost::regex("[ -~]*")) &&
         boost::regex_match(NewArtist, smatch, boost::regex("[ -~]*")) &&
         boost::regex_match(NewAlbum, smatch, boost::regex("[ -~]*")) &&
         boost::regex_match(NewFileName, smatch,
-                           boost::regex("[a-zA-Z0-9 ()_,.'-]*"))) {
+            boost::regex("[a-zA-Z0-9 ()_,.'-]*"))) {
         pDialog1->hide();
         PauseMusic();
         taglib_set_data(SelectedMusic, pEntryTitle1->get_text(),
-                        pEntryArtist1->get_text(), pEntryAlbum1->get_text(),
-                        pEntryFileName1->get_text());
+            pEntryArtist1->get_text(), pEntryAlbum1->get_text(),
+            pEntryFileName1->get_text());
         MusicListChanged();
-    } else
+    }
+    else
         pMessageDialog1->show();
 }
 
 void MyApplication::taglib_set_data(MusicInfoADT _music, Glib::ustring NewTitle,
-                                    Glib::ustring NewArtist,
-                                    Glib::ustring NewAlbum,
-                                    Glib::ustring NewFileName) {
+    Glib::ustring NewArtist,
+    Glib::ustring NewAlbum,
+    Glib::ustring NewFileName) {
     std::string NewFilePath =
         std::filesystem::path(std::string(_music->FilePath))
-            .parent_path()
-            .string() +
+        .parent_path()
+        .string() +
         "/" + NewFileName + SelectedMusic->Extension;
     std::filesystem::rename(
         std::filesystem::path(std::string(_music->FilePath)),
@@ -1491,7 +1534,7 @@ void MyApplication::taglib_set_data(MusicInfoADT _music, Glib::ustring NewTitle,
             std::filesystem::path(_music->LRCFilePath).parent_path().string() +
             "/" + NewFileName + ".lrc";
         std::filesystem::rename(std::filesystem::path(_music->LRCFilePath),
-                                std::filesystem::path(NewLRCFilePath));
+            std::filesystem::path(NewLRCFilePath));
     }
     TagLib::FileRef f(NewFilePath.c_str());
     f.tag()->setTitle(TagLib::String(NewTitle));
@@ -1536,7 +1579,7 @@ void MyApplication::on_TreeSelection2_changed() {
 }
 
 bool MyApplication::on_TreeView2_button_press_event(
-    GdkEventButton *button_event) {
+    GdkEventButton* button_event) {
     if (!UpdatingLyrics)
         if (CurrentMusic->LRC && button_event->type == GDK_2BUTTON_PRESS) {
             bool OriginalIsPlaying = IsPlaying;
@@ -1560,7 +1603,7 @@ void MyApplication::on_MessageDialog1_response(int response_id) {
 // can this function run regardless of whether the user has opened a folder?
 // also can I asynchronously add things to the completion list??
 bool MyApplication::on_EntryCompletion1_match(
-    const Glib::ustring &key, const Gtk::TreeModel::const_iterator &iter) {
+    const Glib::ustring& key, const Gtk::TreeModel::const_iterator& iter) {
 
     // now here is the list of tracks that matches key, where can I add to the
     // results? I can convert it to a MusicInfoCDT if needed
@@ -1569,21 +1612,21 @@ bool MyApplication::on_EntryCompletion1_match(
     if (iter) {
         Gtk::TreeRow row = *iter;
         if (Glib::ustring(row[*pTreeModelColumnTitle])
-                    .lowercase()
-                    .find(key.lowercase()) != Glib::ustring::npos ||
+            .lowercase()
+            .find(key.lowercase()) != Glib::ustring::npos ||
             Glib::ustring(row[*pTreeModelColumnArtist])
-                    .lowercase()
-                    .find(key.lowercase()) != Glib::ustring::npos ||
+            .lowercase()
+            .find(key.lowercase()) != Glib::ustring::npos ||
             Glib::ustring(row[*pTreeModelColumnAlbum])
-                    .lowercase()
-                    .find(key.lowercase()) != Glib::ustring::npos)
+            .lowercase()
+            .find(key.lowercase()) != Glib::ustring::npos)
             return true;
     }
     return false;
 }
 
 bool MyApplication::on_EntryCompletion1_match_selected(
-    const Gtk::TreeModel::const_iterator &iter) {
+    const Gtk::TreeModel::const_iterator& iter) {
     if (iter) {
         pSearchEntry1->set_text("");
         bool OriginalIsPlaying = IsPlaying;
@@ -1598,26 +1641,27 @@ bool MyApplication::on_EntryCompletion1_match_selected(
     return false;
 }
 
-void MyApplication::update_spectrum_data(const GstStructure *s) {
-    const gchar *name = gst_structure_get_name(s);
+void MyApplication::update_spectrum_data(const GstStructure* s) {
+    const gchar* name = gst_structure_get_name(s);
     if (strcmp(name, "spectrum") != 0)
         return;
 
-    const GValue *magnitudes_value = gst_structure_get_value(s, "magnitude");
+    const GValue* magnitudes_value = gst_structure_get_value(s, "magnitude");
 
     bool changed = false;
 
     for (guint i = 0; i < spect_bands; ++i) {
-        const GValue *mag = gst_value_list_get_value(magnitudes_value, i);
+        const GValue* mag = gst_value_list_get_value(magnitudes_value, i);
 
         if (mag != NULL || changed) {
             magnitudes.push_back(g_value_get_float(mag));
             if (!changed) {
                 changed = true;
                 magnitudes.erase(magnitudes.begin(),
-                                 magnitudes.begin() + spect_bands);
+                    magnitudes.begin() + spect_bands);
             }
-        } else {
+        }
+        else {
             magnitudes.push_back(-60);
         }
     }
@@ -1632,7 +1676,7 @@ void MyApplication::update_spectrum_data(const GstStructure *s) {
 }
 
 bool MyApplication::on_DrawingArea1_draw(
-    const Cairo::RefPtr<Cairo::Context> &cr, const GdkEventExpose *event) {
+    const Cairo::RefPtr<Cairo::Context>& cr, const GdkEventExpose* event) {
 
     // Get the dimensions of the drawing area widget
     int width = pDrawingArea1->Gtk::Widget::get_allocated_width();
@@ -1674,11 +1718,11 @@ bool MyApplication::on_DrawingArea1_draw(
 
     for (int i = 0; i < value.size(); ++i) {
         cr->rectangle((int)i * round((double)width / value.size()),
-                      height / 2.0 - round(value[i]) * height / 100.0,
-                      (int)round((double)width / value.size()),
-                      (round(value[i]) * height / 50.0) == 0
-                          ? 1
-                          : (round(value[i]) * height / 50.0));
+            height / 2.0 - round(value[i]) * height / 100.0,
+            (int)round((double)width / value.size()),
+            (round(value[i]) * height / 50.0) == 0
+            ? 1
+            : (round(value[i]) * height / 50.0));
         cr->fill();
     }
 
@@ -1688,8 +1732,8 @@ bool MyApplication::on_DrawingArea1_draw(
     return true;
 }
 
-Glib::ustring MyApplication::PrettyString(const Glib::ustring &str,
-                                          const int MaxLength) {
+Glib::ustring MyApplication::PrettyString(const Glib::ustring& str,
+    const int MaxLength) {
     if (str.length() > MaxLength)
         return (str.substr(0, MaxLength - 3) + "...");
     else
@@ -1706,11 +1750,11 @@ void MyApplication::on_ButtonAddIp1_clicked() {
     // match the port (if there is one) (captured)
     // so smatch will be { full, four octets, port }
     if (boost::regex_match(
-            NewIp, smatch,
-            boost::regex(
-                "^((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?\\.)"
-                "{3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
-                "):?(\\d{4,5})?$"))) // ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
+        NewIp, smatch,
+        boost::regex(
+            "^((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?\\.)"
+            "{3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+            "):?(\\d{4,5})?$"))) // ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
     {
         std::string port_no = "4000";
         // I added this line, so that when a new ip is added, it will attempt
@@ -1759,7 +1803,7 @@ void MyApplication::on_ButtonRemoveIp1_clicked() {
 
 void MyApplication::on_ButtonRemoveAllIp1_clicked() {
     // this removes the connections one by one
-    for (auto &n : NetworkIps) {
+    for (auto& n : NetworkIps) {
         client->remove_socket_by_ip(n, 4000);
     }
     NetworkIps = {};
@@ -1788,12 +1832,12 @@ void MyApplication::start_client(uint16_t port) {
     client = std::make_unique<ApplicationClient>(
         // capturing MyApplication, don't know how much cpying is done
         // but who cares?
-        port, [this](MessageWithOwner &t) { handle_message(t); },
+        port, [this](MessageWithOwner& t) { handle_message(t); },
         [this](peer_id id) { on_connect(id); },
         [this](peer_id id) { on_disconnect(id); });
 }
 
-void MyApplication::handle_message(MessageWithOwner &t) {
+void MyApplication::handle_message(MessageWithOwner& t) {
     // see which type of message the incoming message is
     switch (t.msg.header.type) {
     case MessageType::GET_LYRICS:
@@ -1812,8 +1856,8 @@ void MyApplication::handle_message(MessageWithOwner &t) {
         handle_return_database(t);
         break;
 
-    // these messages are for streaming audio files
-    // but I have no idea how to stream audio files!
+        // these messages are for streaming audio files
+        // but I have no idea how to stream audio files!
     case MessageType::GET_AUDIO_FILE:
     case MessageType::PREPARE_AUDIO_SHARING:
     case MessageType::PREPARED_AUDIO_SHARING:
@@ -1822,21 +1866,21 @@ void MyApplication::handle_message(MessageWithOwner &t) {
     case MessageType::GET_AUDIO_SEGMENT:
     case MessageType::RETURN_AUDIO_SEGMENT:
 
-    // so we also don't handle it
-    // these cases do not have to handled, they are only used in the
-    // interleaving images example
+        // so we also don't handle it
+        // these cases do not have to handled, they are only used in the
+        // interleaving images example
     case MessageType::PREPARE_PICTURE_SHARING:
     case MessageType::PREPARED_PICTURE_SHARING:
     case MessageType::HAS_PICTURE_FILE:
     case MessageType::GET_PICTURE_SEGMENT:
     case MessageType::RETURN_PICTURE_SEGMENT:
     case MessageType::NO_SUCH_PICTURE_SEGMENT:
-    // we also don't handle these two
+        // we also don't handle these two
     case MessageType::GET_TRACK_INFO:
     case MessageType::RETURN_TRACK_INFO:
     case MessageType::NO_SUCH_TRACK:
-    // these cases are just for sanity testing, they are also not used in
-    // the real application
+        // these cases are just for sanity testing, they are also not used in
+        // the real application
     case MessageType::PING:
     case MessageType::PONG:
     case MessageType::NOTHING:
@@ -1862,13 +1906,13 @@ void MyApplication::ask_client_for_file_with_this_checksum(
     if (it == network_tracks.end()) {
         return;
     }
-    for (auto &id : it->second.ids) {
+    for (auto& id : it->second.ids) {
         client->push_message(id, m);
     }
 }
 
 // NOTE: this handler is invoked when ANOTHER PEER is getting your database
-void MyApplication::handle_get_database(MessageWithOwner &t) {
+void MyApplication::handle_get_database(MessageWithOwner& t) {
     ReturnDatabase rd;
     rd.tracks = store.read_all();
     Message m(MessageType::RETURN_DATABASE);
@@ -1880,18 +1924,19 @@ void MyApplication::handle_get_database(MessageWithOwner &t) {
 
 // NOTE: this handler is invoked when ANOTHER PEER returns you with their
 // database
-void MyApplication::handle_return_database(MessageWithOwner &t) {
+void MyApplication::handle_return_database(MessageWithOwner& t) {
     ReturnDatabase rd;
     t.msg >> rd;
     std::cout << "Here are the results from client " << t.id << std::endl;
     // append the tracks from peer to the network tracks vector
-    for (auto &r : rd.tracks) {
+    for (auto& r : rd.tracks) {
         std::cout << r << std::endl;
         // already has this track!
         auto it = network_tracks.find(r.checksum);
         if (it != network_tracks.end()) {
             it->second.ids.push_back(t.id);
-        } else {
+        }
+        else {
             network_tracks[r.checksum] = {
                 .ids = {t.id},
                 .track = r,
@@ -1905,7 +1950,7 @@ void MyApplication::remove_network_tracks(peer_id id) {
     for (auto it = network_tracks.begin(); it != network_tracks.end();) {
         std::cout << it->second.track << std::endl;
         std::cout << "Ids: ";
-        for (auto &id : it->second.ids) {
+        for (auto& id : it->second.ids) {
             std::cout << id << " ";
         }
         std::cout << std::endl;
@@ -1916,9 +1961,10 @@ void MyApplication::remove_network_tracks(peer_id id) {
         // remove it
         if (it->second.ids.empty()) {
             std::cout << "Removed this record " << it->second.track
-                      << std::endl;
+                << std::endl;
             network_tracks.erase(it++);
-        } else {
+        }
+        else {
             ++it;
         }
     }
@@ -1962,16 +2008,17 @@ void MyApplication::remove_network_tracks(peer_id id) {
 // }
 
 // NOTE: this handler is invoked when ANOTHER PEER asks you for lyrics
-void MyApplication::handle_get_lyrics(MessageWithOwner &t) {
+void MyApplication::handle_get_lyrics(MessageWithOwner& t) {
     GetLyrics gl;
     t.msg >> gl;
     Lrc f(gl.filename.c_str());
     if (f.failed()) {
-        NoSuchLyrics nsl{gl.filename};
+        NoSuchLyrics nsl{ gl.filename };
         Message m(MessageType::NO_SUCH_LYRICS);
         m << nsl;
         client->push_message(t.id, m);
-    } else {
+    }
+    else {
         Message m(MessageType::RETURN_LYRICS);
         ReturnLyrics rl{
             .lyrics = f,
@@ -1983,7 +2030,7 @@ void MyApplication::handle_get_lyrics(MessageWithOwner &t) {
 }
 
 // NOTE: this is invoked when ANOTHER PEER returns you some lyrics
-void MyApplication::handle_return_lyrics(MessageWithOwner &t) {
+void MyApplication::handle_return_lyrics(MessageWithOwner& t) {
     ReturnLyrics rl;
     t.msg >> rl;
     if (rl.lyrics.failed()) {
@@ -1997,7 +2044,7 @@ void MyApplication::handle_return_lyrics(MessageWithOwner &t) {
 
 // NOTE: this is invoked when ANOTHER PEER doesn't have that lyrics
 // in this case it does nothing
-void MyApplication::handle_no_such_lyrics(MessageWithOwner &t) {
+void MyApplication::handle_no_such_lyrics(MessageWithOwner& t) {
     NoSuchLyrics nl;
     t.msg >> nl;
 }
