@@ -11,6 +11,8 @@
 #include "wav.h"
 #include "store.h"
 #include "application-client.h"
+#include "file-sharing.h"
+#include "chunked-file.h"
 
 #include <iostream>
 #include <string>
@@ -374,6 +376,30 @@ private:
     void handle_no_such_lyrics(MessageWithOwner &t);
     void handle_get_database(MessageWithOwner &t);
     void handle_return_database(MessageWithOwner &t);
+    // functions for sending files
+    void handle_prepare_file_sharing(MessageWithOwner &t);
+    void handle_prepared_file_sharing(MessageWithOwner &t);
+    void handle_get_segment(MessageWithOwner &t);
+    void handle_return_segment(MessageWithOwner &t);
+    void additional_cycle_hook();
+    void start_file_sharing(const std::string &checksum);
+    void segment_has_arrived(const ReturnSegment &rs, bool end);
+
+    /*
+     * used by peer WHO IS RECEIVING A FILE
+     * This object manages the states of a file transfer operation
+     * i.e. what is the current segment, how many segments are there etc.
+     * it also has multiple queues for buffering messages from all peers
+     * see NETWORK.md on the methods it have
+     */
+    FileSharing fs;
+    /*
+     * used by peer WHO IS SENDING A FILE
+     * This class basically splits a file into N parts and allow random access
+     * for each chunk
+     * read a chunk here, and send it to the peer
+     */
+    ChunkedFile cf;
 };
 
 // #endif /* GTKMM_EXAMPLEAPPLICATION_H */

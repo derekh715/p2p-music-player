@@ -1812,6 +1812,20 @@ void MyApplication::update_tree_model3() {
     }
 }
 
+void MyApplication::segment_has_arrived(const ReturnSegment &rs, bool end) {
+    // What is ReturnSegment?
+    // a ReturnSegment is message returned by a peer
+    // inside there is a body field, which contains a vector of bytes
+    // rs.body
+    //
+    // this return segment is immutable, and it will be destoryed after this
+    // function
+    //
+    // What is end?
+    // if end is on, that means the entire file is sent.
+    // after that no segment should be sent (I hope so)
+}
+
 // network / application related functions
 void MyApplication::start_client(uint16_t port) {
     // I really hope by capturing the class instance in this way
@@ -1825,7 +1839,8 @@ void MyApplication::start_client(uint16_t port) {
         // but who cares?
         port, [this](MessageWithOwner &t) { handle_message(t); },
         [this](peer_id id) { on_connect(id); },
-        [this](peer_id id) { on_disconnect(id); });
+        [this](peer_id id) { on_disconnect(id); },
+        [this]() { additional_cycle_hook(); });
 }
 
 void MyApplication::handle_message(MessageWithOwner &t) {
@@ -1849,22 +1864,29 @@ void MyApplication::handle_message(MessageWithOwner &t) {
 
         // these messages are for streaming audio files
         // but I have no idea how to stream audio files!
-    case MessageType::GET_AUDIO_FILE:
-    case MessageType::PREPARE_AUDIO_SHARING:
-    case MessageType::PREPARED_AUDIO_SHARING:
-    case MessageType::NO_SUCH_AUDIO_FILE:
-    case MessageType::HAS_AUDIO_FILE:
-    case MessageType::GET_AUDIO_SEGMENT:
-    case MessageType::RETURN_AUDIO_SEGMENT:
+    // case MessageType::GET_AUDIO_FILE:
+    // case MessageType::PREPARE_AUDIO_SHARING:
+    // case MessageType::PREPARED_AUDIO_SHARING:
+    // case MessageType::NO_SUCH_AUDIO_FILE:
+    // case MessageType::HAS_AUDIO_FILE:
+    // case MessageType::GET_AUDIO_SEGMENT:
+    // case MessageType::RETURN_AUDIO_SEGMENT:
 
     // so we also don't handle it
     // these cases do not have to handled, they are only used in the
     // interleaving images example
     case MessageType::PREPARE_FILE_SHARING:
+        handle_prepare_file_sharing(t);
+        break;
     case MessageType::PREPARED_FILE_SHARING:
-    case MessageType::HAS_FILE:
+        handle_prepared_file_sharing(t);
+        break;
     case MessageType::GET_SEGMENT:
+        handle_get_segment(t);
+        break;
     case MessageType::RETURN_SEGMENT:
+        handle_return_segment(t);
+        break;
     case MessageType::NO_SUCH_SEGMENT:
     // we also don't handle these two
     case MessageType::GET_TRACK_INFO:
@@ -1888,10 +1910,10 @@ void MyApplication::on_disconnect(peer_id id) { remove_network_tracks(id); }
 
 void MyApplication::ask_client_for_file_with_this_checksum(
     std::string checksum) {
-    Message m(MessageType::GET_AUDIO_FILE);
-    GetAudioFile gaf;
-    gaf.checksum = checksum;
-    m << gaf;
+    Message m(MessageType::PREPARE_FILE_SHARING);
+    PrepareFileSharing pfs;
+    pfs.name = checksum;
+    m << pfs;
     auto it = network_tracks.find(checksum);
     // no file in the network tracks has this checksum
     if (it == network_tracks.end()) {
@@ -1922,6 +1944,13 @@ void MyApplication::handle_return_database(MessageWithOwner &t) {
     // append the tracks from peer to the network tracks vector
     for (auto &r : rd.tracks) {
         std::cout << r << std::endl;
+        // availability check: don't add it to network database if there is a
+        // file locally
+        bool has_same_file_locally = store.has_checksum(r.checksum);
+        if (has_same_file_locally) {
+            continue;
+        }
+        // also check
         // already has this track!
         auto it = network_tracks.find(r.checksum);
         if (it != network_tracks.end()) {
@@ -2035,4 +2064,146 @@ void MyApplication::handle_return_lyrics(MessageWithOwner &t) {
 void MyApplication::handle_no_such_lyrics(MessageWithOwner &t) {
     NoSuchLyrics nl;
     t.msg >> nl;
+}
+
+// this initiates the whole file transfer process
+// see header file for more details
+void MyApplication::start_file_sharing(const std::string &checksum) {
+    fs.reset_sharing_file();
+    auto it = network_tracks.find(checksum);
+    // can't find a file with this checksum
+    if (it == network_tracks.end()) {
+        return;
+    }
+    std::cout << "Started transferring file with checksum: " << checksum
+              << std::endl;
+    // preparing the message for each peer
+    PrepareFileSharing pfs;
+    pfs.name = checksum;
+    for (auto id : it->second.ids) {
+        Message m(MessageType::PREPARE_FILE_SHARING);
+        pfs.assigned_id_for_peer = fs.new_peer(id);
+        m << pfs;
+        client->push_message(id, m);
+    }
+}
+
+// NOTE: this is invoked when ANOTHER PEER needs a file
+void MyApplication::handle_prepare_file_sharing(MessageWithOwner &t) {
+    PrepareFileSharing pfs;
+    t.msg >> pfs;
+    std::cout << "Client " << t.id << " wants file " << pfs.name << std::endl;
+    // assigned_peer_id = pfs.assigned_id_for_peer; (not needed)
+    Track local;
+    bool has_it = store.search_with_checksum(pfs.name, local);
+    // there is not a single file with this checksum!
+    // tell that peer I don't have that file!
+    if (!has_it) {
+        NoSuchFile nsf;
+        nsf.checksum = pfs.name;
+        nsf.assigned_id_for_peer = pfs.assigned_id_for_peer;
+        Message m(MessageType::NO_SUCH_FILE);
+        m << nsf;
+        client->push_message(t.id, m);
+        return;
+    }
+    // if we have that file
+    // open that audio for chunking and tell peer we have it
+    cf.open_file(local.path);
+    Message m(MessageType::PREPARED_FILE_SHARING);
+    PreparedFileSharing pfss;
+    pfss.total_segments = cf.total_segments;
+    pfss.assigned_id_for_peer = pfs.assigned_id_for_peer;
+    m << pfss;
+    client->push_message(t.id, m);
+}
+// NOTE: this is invoked when ANOTHER PEER says he is ready to send
+// the file to you
+void MyApplication::handle_prepared_file_sharing(MessageWithOwner &t) {
+    // we know that the peer will engage in sharing that file
+    std::cout << "Client " << t.id << " is ready to send the file."
+              << std::endl;
+    PreparedFileSharing pps;
+    t.msg >> pps;
+    fs.set_segment_count(pps.total_segments);
+    Message m(MessageType::GET_SEGMENT);
+    GetSegment gps;
+    gps.segment_id = fs.get_next_segment_id();
+    gps.assigned_id_for_peer = pps.assigned_id_for_peer;
+    m << gps;
+    client->push_message(t.id, m);
+    std::cout << "Assigned id is " << pps.assigned_id_for_peer << std::endl;
+    fs.start_timeout(pps.assigned_id_for_peer);
+}
+
+// NOTE: this is when ANOTHER PEER returns you a segment
+void MyApplication::handle_return_segment(MessageWithOwner &t) {
+    ReturnSegment rps;
+    t.msg >> rps;
+    fs.end_timeout(rps.assigned_id_for_peer);
+    std::cout << "Segment " << rps.segment_id << "/"
+              << fs.get_segment_count() - 1 << " received from client " << t.id
+              << " share id: " << rps.assigned_id_for_peer << std::endl;
+    // put that into the queue
+    fs.push_segment(rps);
+    Message m(MessageType::GET_SEGMENT);
+    // all segments are returned, ending...
+    if (fs.all_segments_asked()) {
+        return;
+    }
+    GetSegment gps;
+    gps.segment_id = fs.get_next_segment_id();
+    m << gps;
+    fs.start_timeout(rps.assigned_id_for_peer);
+    client->push_message(t.id, m);
+}
+
+// NOTE: this is when ANOTHER PEER asks for a segment
+void MyApplication::handle_get_segment(MessageWithOwner &t) {
+    GetSegment gps;
+    t.msg >> gps;
+    std::cout << "Segment " << gps.segment_id << "/" << cf.total_segments - 1
+              << " requested by client " << t.id << std::endl;
+    // all requests needed are made
+    if (gps.segment_id >= cf.total_segments) {
+        return;
+    }
+    ReturnSegment rps;
+    bool fine = cf.get(gps.segment_id, rps.body);
+    if (!fine) {
+        std::cout << "I cannot get this segment!" << std::endl;
+        NoSuchSegment nsps;
+        nsps.assigned_id_for_peer = gps.assigned_id_for_peer;
+        nsps.segment_id = gps.segment_id;
+        Message m(MessageType::NO_SUCH_SEGMENT);
+        m << nsps;
+        return;
+    }
+
+    // if there is such a segment, send it back to the peer
+    std::cout << "Giving the segment back to client " << t.id << std::endl;
+    Message m(MessageType::RETURN_SEGMENT);
+    rps.segment_id = gps.segment_id;
+    rps.assigned_id_for_peer = gps.assigned_id_for_peer;
+    m << rps;
+    client->push_message(t.id, m);
+}
+
+// do more stuff besides the main cycle
+void MyApplication::additional_cycle_hook() {
+    fs.try_writing_segment([this](const ReturnSegment &rs, bool end) {
+        segment_has_arrived(rs, end);
+    });
+    // if some peer enters the waiting state
+    fs.if_waiting([this](int assigned_peer_id) {
+        // it is enough
+        if (fs.all_segments_asked()) {
+            return;
+        }
+        Message m(MessageType::GET_SEGMENT);
+        GetSegment gps;
+        gps.segment_id = fs.get_next_segment_id();
+        m << gps;
+        client->push_message(fs.get_peer_id(assigned_peer_id), m);
+    });
 }

@@ -161,8 +161,8 @@ class Message {
     friend Message &operator<<(Message &m, const NoSuchSegment &d);
     friend Message &operator>>(Message &m, NoSuchSegment &d);
 
-    friend Message &operator<<(Message &m, const GetAudioFile &d);
-    friend Message &operator>>(Message &m, GetAudioFile &d);
+    friend Message &operator<<(Message &m, const NoSuchFile &d);
+    friend Message &operator>>(Message &m, NoSuchFile &d);
 
     MessageHeader header;
 };

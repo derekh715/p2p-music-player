@@ -32,18 +32,18 @@ enum class MessageType : std::uint32_t {
     RETURN_LYRICS,
 
     // file streaming
-    GET_AUDIO_FILE,
-    PREPARE_AUDIO_SHARING,
-    PREPARED_AUDIO_SHARING,
-    NO_SUCH_AUDIO_FILE,
-    HAS_AUDIO_FILE,
-    GET_AUDIO_SEGMENT,
-    RETURN_AUDIO_SEGMENT,
+    // GET_AUDIO_FILE,
+    // PREPARE_AUDIO_SHARING,
+    // PREPARED_AUDIO_SHARING,
+    // NO_SUCH_AUDIO_FILE,
+    // HAS_AUDIO_FILE,
+    // GET_AUDIO_SEGMENT,
+    // RETURN_AUDIO_SEGMENT,
 
     // the interleaving pictures example
     PREPARE_FILE_SHARING,
     PREPARED_FILE_SHARING,
-    HAS_FILE,
+    NO_SUCH_FILE,
     GET_SEGMENT,
     RETURN_SEGMENT,
     NO_SUCH_SEGMENT
@@ -87,7 +87,9 @@ struct PrepareAudioSharing {
 };
 
 struct PrepareFileSharing {
-    std::string path;
+    // this name can be a path or a checksum
+    // the client classes have to decide what to use
+    std::string name;
     peer_id assigned_id_for_peer;
 };
 
@@ -96,8 +98,14 @@ struct PreparedFileSharing {
     peer_id assigned_id_for_peer;
 };
 
+struct NoSuchFile {
+    peer_id assigned_id_for_peer;
+    std::string checksum;
+};
+
 struct GetSegment {
     int segment_id;
+    peer_id assigned_id_for_peer;
 };
 
 struct ReturnSegment {
@@ -110,13 +118,6 @@ struct NoSuchSegment {
     int segment_id;
     peer_id assigned_id_for_peer;
 };
-
-struct GetAudioFile {
-    std::string checksum;
-};
-
-struct HasAudioFile {};
-struct NoSuchAudioFile {};
 
 constexpr std::string_view get_message_name(MessageType mt) {
     switch (mt) {
@@ -136,24 +137,26 @@ constexpr std::string_view get_message_name(MessageType mt) {
         return "NO_SUCH_LYRICS";
     case MessageType::RETURN_LYRICS:
         return "RETURN_LYRICS";
-    case MessageType::GET_AUDIO_FILE:
-        return "GET_AUDIO_FILE";
-    case MessageType::HAS_AUDIO_FILE:
-        return "HAS_AUDIO_FILE";
-    case MessageType::NO_SUCH_AUDIO_FILE:
-        return "NO_SUCH_AUDIO_FILE";
-    case MessageType::PREPARE_AUDIO_SHARING:
-        return "PREPARE_AUDIO_SHARING";
-    case MessageType::PREPARED_AUDIO_SHARING:
-        return "PREPARED_AUDIO_SHARING";
-    case MessageType::GET_AUDIO_SEGMENT:
-        return "GET_AUDIO_SEGMENT";
-    case MessageType::RETURN_AUDIO_SEGMENT:
-        return "RETURN_AUDIO_SEGMENT";
+    // case MessageType::GET_AUDIO_FILE:
+    //     return "GET_AUDIO_FILE";
+    // case MessageType::HAS_AUDIO_FILE:
+    //     return "HAS_AUDIO_FILE";
+    // case MessageType::NO_SUCH_AUDIO_FILE:
+    //     return "NO_SUCH_AUDIO_FILE";
+    // case MessageType::PREPARE_AUDIO_SHARING:
+    //     return "PREPARE_AUDIO_SHARING";
+    // case MessageType::PREPARED_AUDIO_SHARING:
+    //     return "PREPARED_AUDIO_SHARING";
+    // case MessageType::GET_AUDIO_SEGMENT:
+    //     return "GET_AUDIO_SEGMENT";
+    // case MessageType::RETURN_AUDIO_SEGMENT:
+    //     return "RETURN_AUDIO_SEGMENT";
     case MessageType::PREPARE_FILE_SHARING:
         return "PREPARE_FILE_SHARING";
     case MessageType::PREPARED_FILE_SHARING:
         return "PREPARED_FILE_SHARING";
+    case MessageType::NO_SUCH_FILE:
+        return "NO_SUCH_FILE";
     case MessageType::GET_SEGMENT:
         return "GET_SEGMENT";
     case MessageType::RETURN_SEGMENT:

@@ -136,20 +136,20 @@ Message &operator>>(Message &m, NoSuchLyrics &d) {
 MessageHeader::MessageHeader(MessageType t) : type(t) {}
 
 Message &operator<<(Message &m, const PrepareFileSharing &d) {
-    m << d.path << d.assigned_id_for_peer;
+    m << d.name << d.assigned_id_for_peer;
     return m;
 }
 Message &operator>>(Message &m, PrepareFileSharing &d) {
-    m >> d.assigned_id_for_peer >> d.path;
+    m >> d.assigned_id_for_peer >> d.name;
     return m;
 }
 
 Message &operator<<(Message &m, const GetSegment &d) {
-    m << d.segment_id;
+    m << d.segment_id << d.assigned_id_for_peer;
     return m;
 }
 Message &operator>>(Message &m, GetSegment &d) {
-    m >> d.segment_id;
+    m >> d.assigned_id_for_peer >> d.segment_id;
     return m;
 }
 
@@ -189,12 +189,11 @@ Message &operator>>(Message &m, ReturnDatabase &d) {
     return m;
 }
 
-Message &operator<<(Message &m, const GetAudioFile &d) {
-    m << d.checksum;
+Message &operator<<(Message &m, const NoSuchFile &d) {
+    m << d.assigned_id_for_peer << d.checksum;
     return m;
 }
-
-Message &operator>>(Message &m, GetAudioFile &d) {
-    m >> d.checksum;
+Message &operator>>(Message &m, NoSuchFile &d) {
+    m >> d.checksum >> d.assigned_id_for_peer;
     return m;
 }

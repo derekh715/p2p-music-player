@@ -35,7 +35,7 @@ class Store {
     // initialize the database
     // drop_all: should we drop all tables?
     // filename: which file should sqlite use?
-    Store(bool drop_all, std::string filename = "sqlite.db");
+    Store(bool drop_all, const std::string &filename = "sqlite.db");
 
     // add one track into the database
     // return value indicates if it is successful or not
@@ -74,10 +74,14 @@ class Store {
     // search with text
     // returns a vector of search results
     // if nothing is matched, the vector is empty
-    std::vector<Track> search(std::string str);
+    std::vector<Track> search(const std::string &str);
 
     // search with file path
-    bool search_with_path(std::string str, Track &t);
+    bool search_with_path(const std::string &str, Track &t);
+
+    // search with file path
+    bool has_checksum(const std::string &str);
+    bool search_with_checksum(const std::string &str, Track &t);
 
   private:
     // the database handle for executing each query
@@ -87,7 +91,8 @@ class Store {
     // the consumer should executeStep first
     void populate_track_from_get_column(SQLite::Statement &q, Track &t);
     // get absolute path of a file
-    bool get_absolute_file(std::string name, std::filesystem::path &path);
+    bool get_absolute_file(const std::string &name,
+                           std::filesystem::path &path);
 
     std::string checksum_of_track(Track &t);
 };

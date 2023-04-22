@@ -69,14 +69,14 @@ add_test(test_msg "" tests/test_msg.cpp message.cpp store-types.cpp lrc.cpp
 add_test(test_chunk "" tests/test_chunk.cpp chunked-file.cpp util.cpp)
 
 set(base_srcs util.cpp store.cpp base-client.cpp message.cpp store-types.cpp
-  lrc.cpp md5.cpp chunked-file.cpp)
+  lrc.cpp md5.cpp chunked-file.cpp file-sharing.cpp)
 
 # main executable
 # add source files here
 # p2pmss will be the executable that has the main function
 add_executable(p2pmss main.cpp application.cpp
   wav.cpp listfiles.cpp application-client.cpp ${base_srcs})
-add_executable(network network-example.cpp client.cpp file-sharing.cpp ${base_srcs})
+add_executable(network network-example.cpp client.cpp ${base_srcs})
 # we link p2pmss with the necessary libraries like gtkmm4
 target_link_libraries(p2pmss PRIVATE
   SQLiteCpp

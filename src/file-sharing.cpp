@@ -11,36 +11,36 @@ FileSharing::~FileSharing() {
     }
 }
 
-void FileSharing::write_segment(const ReturnSegment &rps) {
-    std::cout << "Writing " << rps.body.size() << " bytes to the file ("
-              << current_byte << " to " << current_byte + rps.body.size() << ")"
-              << " segment: " << rps.segment_id << "/"
-              << total_segment_count - 1 << std::endl;
-    current_byte += rps.body.size();
-    os.write(rps.body.data(), rps.body.size());
-}
+void FileSharing::write_segment(const ReturnSegment &rps) {}
 
-void FileSharing::try_writing_segment() {
+void FileSharing::try_writing_segment(
+    std::function<void(const ReturnSegment &, bool)> write_segment) {
+    if (block_write) {
+        return;
+    }
+    bool all_empty = true;
     // try to write two segments if possible
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 2; i++) {
         // traverse through the list to see if there are in-order segments
         // if yes write it to the output stream
         for (auto &q : queue_buffer) {
             if (q.empty()) {
                 continue;
             }
+            all_empty = false;
             auto &rps = q.front();
             if (rps.segment_id == current_writing_id) {
-                write_segment(rps);
+                std::cout << "Writing " << rps.body.size()
+                          << " bytes to the file (" << current_byte << " to "
+                          << current_byte + rps.body.size() << ")"
+                          << " segment: " << rps.segment_id << "/"
+                          << total_segment_count - 1 << std::endl;
+                current_byte += rps.body.size();
+                bool end = ++current_writing_id >= total_segment_count;
+                write_segment(rps, end);
                 q.pop();
                 // all requests needed are made, exit now
-                if (++current_writing_id >= total_segment_count) {
-                    if (os.is_open()) {
-                        std::cout
-                            << "All segments are received, closing ofstream"
-                            << std::endl;
-                        os.close();
-                    }
+                if (end) {
                     return;
                 }
             } else if (rps.segment_id < current_writing_id) {
@@ -49,6 +49,10 @@ void FileSharing::try_writing_segment() {
                 q.pop();
             }
         }
+        if (all_empty) {
+            break;
+        }
+        all_empty = true;
     }
 }
 
@@ -63,14 +67,6 @@ void FileSharing::reset_sharing_file() {
     waiting.clear();
     timeout_timers.clear();
     // open_file_for_writing();
-}
-
-void FileSharing::open_file_for_writing(const std::string &file) {
-    os.open(file, std::ios::out | std::ios::binary | std::ios::trunc);
-    if (!os.is_open()) {
-        std::cout << "For some reason the file cannot be opened for writing!"
-                  << std::endl;
-    }
 }
 
 void FileSharing::push_segment(ReturnSegment rps) {
@@ -96,7 +92,6 @@ int FileSharing::new_peer(peer_id id) {
 }
 
 void FileSharing::start_timeout(int assigned_id) {
-    std::cout << "[PS] start timeout " << assigned_id << std::endl;
     // try to wait for 10s
     // if nothing is returned set the waiting bit to be true
     timeout_timers[assigned_id].expires_from_now(10s);
@@ -107,7 +102,6 @@ void FileSharing::start_timeout(int assigned_id) {
     });
 }
 void FileSharing::end_timeout(int assigned_id) {
-    std::cout << "[PS] end timeout " << assigned_id << std::endl;
     timeout_timers[assigned_id].cancel();
 }
 
@@ -121,3 +115,7 @@ void FileSharing::if_waiting(std::function<void(int)> handler) {
 }
 
 int FileSharing::get_peer_id(int assigned_id) { return peer_map[assigned_id]; }
+
+void FileSharing::pause_writing() { block_write = true; }
+
+void FileSharing::resume_writing() { block_write = false; }

@@ -326,3 +326,7 @@ void BaseClient::write_body(std::shared_ptr<tcp::socket> socket) {
             start_writing();
         });
 }
+
+std::map<peer_id, std::shared_ptr<tcp::socket>> BaseClient::get_peers() {
+    return peers;
+}

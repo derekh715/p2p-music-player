@@ -27,6 +27,7 @@ struct ChunkedFile {
     ~ChunkedFile();
 
     void open_file(fs::path path, int chunk_size = DEFAULT_CHUNK_SIZE);
+    void close();
 
     // randomly get a segment from the file
     // the returned boolean indicates if the data is correcly written into

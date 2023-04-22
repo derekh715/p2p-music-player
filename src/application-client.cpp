@@ -3,9 +3,11 @@
 ApplicationClient::ApplicationClient(
     uint16_t port, std::function<void(MessageWithOwner &)> handler,
     std::function<void(peer_id)> connect,
-    std::function<void(peer_id)> disconnect)
+    std::function<void(peer_id)> disconnect,
+    std::function<void()> additional_cycle_hook)
     : BaseClient(port), handler{handler}, connect_handler{connect},
-      disconnect_handler{disconnect} {
+      disconnect_handler{disconnect}, additional_cycle_hook{
+                                          additional_cycle_hook} {
     cycle();
 }
 
@@ -16,6 +18,7 @@ void ApplicationClient::handle_message(MessageWithOwner &msg) { handler(msg); }
 void ApplicationClient::cycle() {
     timer.expires_from_now(cycle_time);
     timer.async_wait([&](asio::error_code ec) {
+        additional_cycle_hook();
         // clear the in messages array first, if there are messages clear them
         while (!in_msgs.empty()) {
             auto msg = in_msgs.pop_front();

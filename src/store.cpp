@@ -1,6 +1,6 @@
 #include "store.h"
 
-Store::Store(bool drop_all, std::string filename)
+Store::Store(bool drop_all, const std::string &filename)
     : db(filename, SQLite::OPEN_CREATE | SQLite::OPEN_READWRITE) {
     if (drop_all) {
         db.exec("DROP TABLE IF EXISTS tracks");
@@ -56,7 +56,8 @@ bool Store::create(Track &t, bool strict) {
            1; // something is wrong if zero rows or more rows are affected
 }
 
-bool Store::get_absolute_file(std::string name, std::filesystem::path &path) {
+bool Store::get_absolute_file(const std::string &name,
+                              std::filesystem::path &path) {
     std::error_code ec;
     std::filesystem::path rel = std::filesystem::path(name);
     path = std::filesystem::canonical(rel, ec);
@@ -179,7 +180,7 @@ bool Store::remove(int id) {
     return nrows == 1;
 };
 
-std::vector<Track> Store::search(std::string str) {
+std::vector<Track> Store::search(const std::string &str) {
     std::vector<Track> tracks;
     SQLite::Statement q(db, "SELECT * FROM tracks "
                             "WHERE album LIKE :album OR "
@@ -199,10 +200,29 @@ std::vector<Track> Store::search(std::string str) {
     return tracks;
 }
 
-bool Store::search_with_path(std::string str, Track &t) {
+bool Store::search_with_path(const std::string &str, Track &t) {
     SQLite::Statement q(db, "SELECT * FROM tracks "
                             "WHERE path = :path ");
     q.bind(":path", str);
+    bool success = q.executeStep();
+    if (success) {
+        populate_track_from_get_column(q, t);
+    }
+    return success;
+}
+
+bool Store::has_checksum(const std::string &str) {
+    SQLite::Statement q(db, "SELECT * FROM tracks "
+                            "WHERE checksum = :checksum ");
+    q.bind(":checksum", str);
+    bool success = q.executeStep();
+    return success;
+}
+
+bool Store::search_with_checksum(const std::string &str, Track &t) {
+    SQLite::Statement q(db, "SELECT * FROM tracks "
+                            "WHERE checksum = :checksum ");
+    q.bind(":checksum", str);
     bool success = q.executeStep();
     if (success) {
         populate_track_from_get_column(q, t);

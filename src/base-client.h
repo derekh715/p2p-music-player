@@ -57,6 +57,8 @@ class BaseClient {
      */
     std::vector<std::pair<peer_id, std::shared_ptr<tcp::socket>>> get_sockets();
 
+    std::map<peer_id, std::shared_ptr<tcp::socket>> get_peers();
+
   protected:
     void accept_socket();
 

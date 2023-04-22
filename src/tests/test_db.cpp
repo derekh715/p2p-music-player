@@ -175,9 +175,7 @@ TEST(db_test, upsert_as_insert) {
 
 TEST(db_test, upsert_as_update) {
     Store s(true, ":memory:");
-    Track t = {
-        .title = "File Example",
-    };
+    Track t = {.title = "File Example", .path = "same"};
     s.upsert(t);
     auto entries = s.read_all();
     entries[0].title = "Changed!";
@@ -186,4 +184,12 @@ TEST(db_test, upsert_as_update) {
     auto new_entries = s.read_all();
     EXPECT_THAT(new_entries.size(), 1);
     EXPECT_THAT(new_entries[0], entries[0]);
+}
+
+TEST(db_test, search_with_checksum) {
+    Store s(true, ":memory:");
+    Track t = {.checksum = "334a"};
+    s.create(t);
+    bool has = s.has_checksum("334a");
+    EXPECT_EQ(has, true);
 }

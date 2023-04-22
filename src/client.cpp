@@ -7,10 +7,6 @@ Client::Client(uint16_t port, const std::string &filename)
 
 Client::~Client() {}
 
-std::map<peer_id, std::shared_ptr<tcp::socket>> Client::get_peers() {
-    return peers;
-}
-
 void Client::on_connect(peer_id id) {
     push_message(id, Message(MessageType::PING));
 }
@@ -159,11 +155,11 @@ void Client::handle_prepare_picture_sharing(MessageWithOwner &t) {
     // prepare chunked file
     PrepareFileSharing pfs;
     t.msg >> pfs;
-    std::cout << "Client " << t.id << " wants file " << pfs.path << std::endl;
+    std::cout << "Client " << t.id << " wants file " << pfs.name << std::endl;
     assigned_peer_id = pfs.assigned_id_for_peer;
 
     // send more things at once
-    cf.open_file(pfs.path, DEFAULT_CHUNK_SIZE * 2);
+    cf.open_file(pfs.name, DEFAULT_CHUNK_SIZE * 2);
     if (cf.failure()) {
         return;
     }
@@ -296,7 +292,17 @@ void Client::handle_message(MessageWithOwner &t) {
 }
 
 void Client::additional_cycle_hook() {
-    fs.try_writing_segment();
+    // custom handler for writing a segment
+    fs.try_writing_segment([this](const ReturnSegment &rps, bool end) {
+        os.write(rps.body.data(), rps.body.size());
+        if (end) {
+            if (os.is_open()) {
+                std::cout << "All segments are received, closing ofstream"
+                          << std::endl;
+                os.close();
+            }
+        }
+    });
     // if some peer enters the waiting state
     fs.if_waiting([this](int assigned_peer_id) {
         Message m(MessageType::GET_SEGMENT);
@@ -313,7 +319,12 @@ void Client::additional_cycle_hook() {
 
 void Client::start_file_sharing() {
     fs.reset_sharing_file();
-    fs.open_file_for_writing("./interleaved.bmp");
+    os.open("./interleaved.bmp",
+            std::ios::out | std::ios::binary | std::ios::trunc);
+    if (!os.is_open()) {
+        std::cout << "For some reason the file cannot be opened for writing!"
+                  << std::endl;
+    }
 }
 
 void Client::cycle() {

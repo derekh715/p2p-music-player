@@ -63,8 +63,7 @@ void get_lyrics_file(Client &c) {
 
 void ask_for_picture_file(Client &c) {
     std::cout << "Ask for the images!!!!" << std::endl;
-    c.fs.reset_sharing_file();
-    c.fs.open_file_for_writing("./interleaved.bmp");
+    c.start_file_sharing();
     PrepareFileSharing pfs;
     for (auto p : c.get_peers()) {
         Message m(MessageType::PREPARE_FILE_SHARING);
@@ -75,7 +74,7 @@ void ask_for_picture_file(Client &c) {
         char filename[30];
         sprintf(filename, "1-%d.bmp", pfs.assigned_id_for_peer + 1);
         path /= filename;
-        pfs.path = path;
+        pfs.name = path;
         m << pfs;
         c.push_message(p.first, m);
     }

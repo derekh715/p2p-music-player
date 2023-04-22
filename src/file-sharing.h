@@ -14,9 +14,12 @@ class FileSharing {
   public:
     FileSharing();
     ~FileSharing();
-    void open_file_for_writing(const std::string &file);
     void reset_sharing_file();
-    void try_writing_segment();
+
+    // see if there is any segment in the queue, if there is
+    // call write_segment are written
+    void try_writing_segment(
+        std::function<void(const ReturnSegment &, bool)> write_segment);
     int get_next_assigned_id();
 
     void push_segment(ReturnSegment rps);
@@ -41,8 +44,12 @@ class FileSharing {
     std::ofstream os;
     int current_assigned_id = -1;
     int total_segment_count;
+    bool block_write = false;
 
     void write_segment(const ReturnSegment &rps);
+    void pause_writing();
+    void resume_writing();
+
     // this flag will be for peer if it is idling (the queue is full) or
     // the there is no response from the peer
     std::vector<bool> waiting;

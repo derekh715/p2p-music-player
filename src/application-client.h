@@ -13,7 +13,8 @@ class ApplicationClient : public BaseClient {
     ApplicationClient(uint16_t port,
                       std::function<void(MessageWithOwner &)> handler,
                       std::function<void(peer_id)> connect_handler,
-                      std::function<void(peer_id)> disconnect_handler);
+                      std::function<void(peer_id)> disconnect_handler,
+                      std::function<void()> additional_cycle_hook);
     ~ApplicationClient();
 
     void handle_message(MessageWithOwner &msg) override;
@@ -26,6 +27,7 @@ class ApplicationClient : public BaseClient {
     std::function<void(MessageWithOwner &)> handler;
     std::function<void(peer_id)> connect_handler;
     std::function<void(peer_id)> disconnect_handler;
+    std::function<void()> additional_cycle_hook;
 };
 
 #endif

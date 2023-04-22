@@ -37,7 +37,6 @@ class Client : public BaseClient {
     void handle_get_database(MessageWithOwner &t);
     void handle_return_database(MessageWithOwner &t);
 
-    std::map<peer_id, std::shared_ptr<tcp::socket>> get_peers();
     void cycle();
     void additional_cycle_hook();
     void start_file_sharing();
@@ -47,6 +46,7 @@ class Client : public BaseClient {
     Store s;
     int assigned_peer_id = 0;
     ChunkedFile cf;
+    std::ofstream os;
 };
 
 #endif

@@ -15,6 +15,7 @@ void ChunkedFile::open_file(fs::path path, int _chunk_size) {
         failed = true;
         return;
     }
+    close();
     // floor division will miss the last incomplete chunk
     // so add one to it
     total_segments = size / chunk_size;
@@ -30,11 +31,13 @@ void ChunkedFile::open_file(fs::path path, int _chunk_size) {
 
 bool ChunkedFile::failure() { return failed; }
 
-ChunkedFile::~ChunkedFile() {
+void ChunkedFile::close() {
     if (f.is_open()) {
         f.close();
     }
 }
+
+ChunkedFile::~ChunkedFile() { close(); }
 
 bool ChunkedFile::get(int segment_id, std::vector<char> &body) {
     // segment_id is zero based
