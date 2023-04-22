@@ -33,8 +33,15 @@ class FileSharing {
     // if nothing, drop it
     void end_timeout(int assigned_id);
     // if the waiting flag is on for a peer, execute the handler
-    void if_waiting(std::function<void(int)> handler);
+    void if_idle(std::function<void(int)> handler);
     int get_peer_id(int assigned_id);
+
+    void increment_peer_failure(int assigned_id);
+    void set_peer_idle(int assigned_id);
+    void unset_peer_idle(int assigned_id);
+    void die_peer(int assigned_id);
+    bool is_peer_dead(int assigned_id);
+    bool is_peer_idle(int assigned_id);
 
   private:
     std::vector<std::queue<ReturnSegment>> queue_buffer;
@@ -50,9 +57,16 @@ class FileSharing {
     void pause_writing();
     void resume_writing();
 
+    uint8_t increment_failure(uint8_t state);
+    uint8_t set_idle(uint8_t state);
+    uint8_t unset_idle(uint8_t state);
+    uint8_t die(uint8_t state);
+    bool is_dead(uint8_t state);
+    bool is_idle(uint8_t state);
+
     // this flag will be for peer if it is idling (the queue is full) or
     // the there is no response from the peer
-    std::vector<bool> waiting;
+    std::vector<uint8_t> status;
     std::vector<asio::high_resolution_timer> timeout_timers;
     asio::io_context ctx;
     std::thread worker;

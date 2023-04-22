@@ -304,7 +304,7 @@ void Client::additional_cycle_hook() {
         }
     });
     // if some peer enters the waiting state
-    fs.if_waiting([this](int assigned_peer_id) {
+    fs.if_idle([this](int assigned_peer_id) {
         Message m(MessageType::GET_SEGMENT);
         // it is enough
         if (fs.all_segments_asked()) {

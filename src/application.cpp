@@ -2195,7 +2195,7 @@ void MyApplication::additional_cycle_hook() {
         segment_has_arrived(rs, end);
     });
     // if some peer enters the waiting state
-    fs.if_waiting([this](int assigned_peer_id) {
+    fs.if_idle([this](int assigned_peer_id) {
         // it is enough
         if (fs.all_segments_asked()) {
             return;

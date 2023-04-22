@@ -76,31 +76,6 @@ For each cycle, do the following:
 I don't know if this design is good or not, now each message will have a delay
 of at least one second, but this is easiest I can think of.
 
-## Interleaving Images
-
-![Passing Segments](./pics/image_interleave.png)
-
-1. First the client announces that he wants the images, the peers responded with
-   yes
-2. As soon as a peer says yes, the client requests for the next segment. In the
-   diagram above, peer one says yes first, so clients asks for the first
-   segment.
-3. Then peer two responded. Ask him for the second segment.
-4. Ask peer three for segment two since he is the latest.
-5. After a while, peer two responded with segment one, ask him for segment
-   three.
-6. Do this until the last segment is requested.
-
-During the six phases, the program will see if there are any queued messages. If
-yes, it will try to clear it.
-
-### Interleaving Images Timeout
-
-![What happens when Timeout](./pics/timeout.png)
-
-When a peer failed to respond for that segment after certain amount of seconds,
-**drop** that segment and ask him for the next segment.
-
 ## What is a Message?
 
 A message contains a header and body.
@@ -134,3 +109,54 @@ This handler can do whatever it wants, but most commonly it will scrutinize the
 incoming message and construct a response. The response can be saved to the
 `out_msgs` array by `push_message`. Note that the message will not be sent
 immediately, it will be sent in the next cycle.
+
+## Interleaving Images
+
+![Passing Segments](./pics/image_interleave.png)
+
+1. First the client announces that he wants the images, the peers responded with
+   yes
+2. As soon as a peer says yes, the client requests for the next segment. In the
+   diagram above, peer one says yes first, so clients asks for the first
+   segment.
+3. Then peer two responded. Ask him for the second segment.
+4. Ask peer three for segment two since he is the latest.
+5. After a while, peer two responded with segment one, ask him for segment
+   three.
+6. Do this until the last segment is requested.
+
+During the six phases, the program will see if there are any queued messages. If
+yes, it will try to clear it.
+
+### Interleaving Images Timeout
+
+![What happens when Timeout](./pics/timeout.png)
+
+When a peer failed to respond for that segment after certain amount of seconds,
+**drop** that segment and ask him for the next segment.
+
+## Sending Audio Files
+
+Assume there are two peers 1 and 2, and 1 is asking 2 for a file. The following
+happens:
+
+1. Peer 1 should call `start_file_sharing` (line 2071). It will construct the correct
+   messages and send it to peer 2. **This is not hooked to the user interface
+   yet.**
+
+2. Peer 2's `handle_prepare_file_sharing` will be called. This function opens
+   the file for sharing.
+
+3. Peer 1 will start asking for segments.
+
+4. Peer 2 will respond accordingly.
+
+5. Peer 1's `segment_has_arrived` (line 1815) will call when the segment arrives. There are
+   two things that are important:
+
+-  The segment arrives **in order**.
+-  Having that said, some segments will be **dropped** if peer 2 does not
+   respond.
+
+The arguments that this function receives is explained in the source file.
+**The function is also not hooked to anywhere**.

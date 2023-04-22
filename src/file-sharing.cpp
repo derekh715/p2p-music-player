@@ -64,7 +64,7 @@ void FileSharing::reset_sharing_file() {
     current_byte = 0;
     current_assigned_id = -1;
     peer_map.clear();
-    waiting.clear();
+    status.clear();
     timeout_timers.clear();
     // open_file_for_writing();
 }
@@ -85,7 +85,7 @@ void FileSharing::set_segment_count(int t) { total_segment_count = t; }
 int FileSharing::new_peer(peer_id id) {
     std::cout << "[PS] new peer " << id << std::endl;
     queue_buffer.push_back(std::queue<ReturnSegment>());
-    waiting.push_back(false);
+    status.push_back(0);
     timeout_timers.push_back(asio::high_resolution_timer(ctx));
     peer_map.push_back(id);
     return ++current_assigned_id;
@@ -96,7 +96,7 @@ void FileSharing::start_timeout(int assigned_id) {
     // if nothing is returned set the waiting bit to be true
     timeout_timers[assigned_id].expires_from_now(10s);
     timeout_timers[assigned_id].async_wait([&](asio::error_code ec) {
-        waiting[assigned_id] = true;
+        status[assigned_id] = increment_failure(status[assigned_id]);
         // don't have this segment, it is over
         current_writing_id++;
     });
@@ -105,10 +105,10 @@ void FileSharing::end_timeout(int assigned_id) {
     timeout_timers[assigned_id].cancel();
 }
 
-void FileSharing::if_waiting(std::function<void(int)> handler) {
-    // std::cout << "[PS] checking wait " << std::endl;
-    for (int i = 0; i < waiting.size(); i++) {
-        if (waiting[i]) {
+void FileSharing::if_idle(std::function<void(int)> handler) {
+    for (int i = 0; i < status.size(); i++) {
+        // don't ask dead peers and those that are busy
+        if (!is_dead(status[i]) && is_idle(status[i])) {
             handler(i);
         }
     }
@@ -119,3 +119,42 @@ int FileSharing::get_peer_id(int assigned_id) { return peer_map[assigned_id]; }
 void FileSharing::pause_writing() { block_write = true; }
 
 void FileSharing::resume_writing() { block_write = false; }
+
+uint8_t FileSharing::increment_failure(uint8_t state) {
+    uint8_t original_failure = state & 0x00000011;
+    // already failed three times, declare it dead
+    if (original_failure == 0x11) {
+        return die(state);
+    }
+    return set_idle(state) | (original_failure + 1);
+}
+
+uint8_t FileSharing::set_idle(uint8_t state) { return state | 0x100; }
+
+uint8_t FileSharing::unset_idle(uint8_t state) { return state & 0x011; }
+
+uint8_t FileSharing::die(uint8_t state) { return state | 0x1000; }
+
+bool FileSharing::is_dead(uint8_t state) { return (state & 0x1000) != 0; }
+bool FileSharing::is_idle(uint8_t state) { return (state & 0x100) != 0; }
+
+void FileSharing::increment_peer_failure(int assigned_id) {
+    status[assigned_id] = increment_failure(status[assigned_id]);
+}
+void FileSharing::set_peer_idle(int assigned_id) {
+    status[assigned_id] = set_idle(status[assigned_id]);
+}
+void FileSharing::unset_peer_idle(int assigned_id) {
+    status[assigned_id] = unset_idle(status[assigned_id]);
+}
+void FileSharing::die_peer(int assigned_id) {
+    status[assigned_id] = die(status[assigned_id]);
+}
+
+bool FileSharing::is_peer_dead(int assigned_id) {
+    return is_dead(status[assigned_id]);
+}
+
+bool FileSharing::is_peer_idle(int assigned_id) {
+    return is_idle(status[assigned_id]);
+}

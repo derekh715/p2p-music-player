@@ -382,7 +382,17 @@ private:
     void handle_get_segment(MessageWithOwner &t);
     void handle_return_segment(MessageWithOwner &t);
     void additional_cycle_hook();
+    /*
+     * This function starts file sharing
+     * Provide a checksum so that it knows who to ask for that file
+     * that checksum must be present in network_tracks
+     * do not put the checksum of a local file.
+     */
     void start_file_sharing(const std::string &checksum);
+    /*
+     * This function process the returned bytes
+     * It will be invoked asyncronously
+     */
     void segment_has_arrived(const ReturnSegment &rs, bool end);
 
     /*
