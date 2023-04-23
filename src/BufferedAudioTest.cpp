@@ -24,7 +24,8 @@ int pushfile (const char *path, BufferedAudio *des, bool last = false){
         /* record cursor */
         offset = input_file.tellg();
         count++;
-        /* check EOS(EOF here) */
+        
+        /* check EOF */
         input_file.seekg(0, std::ios::end);
         if(offset==input_file.tellg()){
             offset = 0;
@@ -32,6 +33,7 @@ int pushfile (const char *path, BufferedAudio *des, bool last = false){
         }
         input_file.close();
     }
+    /* check EOS */
     if(last)
         des->pushEOS();
     return count;
