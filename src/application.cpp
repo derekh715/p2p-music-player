@@ -984,6 +984,15 @@ int MyApplication::GetSortIndex(MusicInfoADT _music, TreeViewColumns SortColumn,
 }
 
 void MyApplication::LoadMusic() {
+    if (CurrentMusic->checksum != ""){  //check if it's network file
+        if(bfa != NULL)
+            delete bfa;
+        bfa = new BufferedAudio;
+        pipeline = bfa.getPipeline();
+        start_file_sharing(CurrentMusic->checksum);
+        return;
+    }
+    
     if (CurrentMusic->Extension == ".wav" && CurrentMusic->CanonicalWAV)
         if (!wav->openWavFile(CurrentMusic->FilePath.c_str()))
             CurrentMusic->CanonicalWAV = false;
@@ -1824,6 +1833,10 @@ void MyApplication::segment_has_arrived(const ReturnSegment &rs, bool end) {
     // What is end?
     // if end is on, that means the entire file is sent.
     // after that no segment should be sent (I hope so)
+    
+    bfa.pushBuffer(rs.body.data(),rs.body.size());
+    if(end)
+        bfa.pushEOS();
 }
 
 // network / application related functions
