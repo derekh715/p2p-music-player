@@ -13,6 +13,7 @@
 #include "application-client.h"
 #include "file-sharing.h"
 #include "chunked-file.h"
+#include "bufferedaudio.h"
 
 #include <iostream>
 #include <string>
@@ -410,6 +411,8 @@ private:
      * read a chunk here, and send it to the peer
      */
     ChunkedFile cf;
+    
+    BufferedAudio *bfa = NULL;
 };
 
 // #endif /* GTKMM_EXAMPLEAPPLICATION_H */
