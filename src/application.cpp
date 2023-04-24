@@ -989,7 +989,7 @@ void MyApplication::LoadMusic() {
     if (start_file_sharing(CurrentMusic->Checksum)) {
         if (bfa != NULL)
             delete bfa;
-        bfa = new BufferedAudio;
+        bfa = new BufferedAudio(CurrentMusic->Extension);
         pipeline = bfa->getPipeline();
         ;
         return;
