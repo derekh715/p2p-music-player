@@ -3,6 +3,7 @@
 
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
+#include <algorithm>
 #include <deque>
 
 class BufferedAudio;
@@ -12,7 +13,7 @@ class BufferedAudio{
         BufferedAudio();
         ~BufferedAudio();
         GstElement *getPipeline();
-        void pushBuffer(char *buffer, guint32 size);
+        void pushBuffer(const char *buffer, guint32 size);
         void pushEOS();
 
     private:
