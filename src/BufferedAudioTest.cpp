@@ -1,13 +1,13 @@
-#include "bufferedaudio.h"
-#include <fstream>
-#include <gst/app/gstappsrc.h>
 #include <gst/gst.h>
-#include <iostream>
+#include <gst/app/gstappsrc.h>
 #include <string>
+#include <iostream>
+#include <fstream>
+#include "bufferedaudio.h"
 
-int pushfile(const char *path, BufferedAudio *des, bool last = false) {
+int pushfile (const char *path, BufferedAudio *des, bool last = false){      
     int offset = 0, count = 0;
-    while (1) {
+    while(1){
         std::ifstream input_file;
         input_file.open(path, std::ios::binary);
 
@@ -24,44 +24,44 @@ int pushfile(const char *path, BufferedAudio *des, bool last = false) {
         /* record cursor */
         offset = input_file.tellg();
         count++;
-
-        /* check EOF */
+        /* check EOS(EOF here) */
         input_file.seekg(0, std::ios::end);
-        if (offset == input_file.tellg()) {
+        if(offset==input_file.tellg()){
             offset = 0;
             break;
         }
         input_file.close();
     }
-    /* check EOS */
-    if (last)
+    if(last)
         des->pushEOS();
     return count;
 }
 
-int main() {
-    BufferedAudio *bufaudio = new BufferedAudio();
-
-    std::cout << "Press Enter to read files.\n";
+int main (){
+    std::cout << "Enter file extention. (.mp3 / .m4a / ...)\n";
     std::string s;
+    getline(std::cin, s);
+
+    BufferedAudio *bufaudio = new BufferedAudio(s);
+
+
+    std::cout << "Enter file name.\n";
 
     getline(std::cin, s);
-    std::cout << pushfile("f0.tmp", bufaudio) << " buffers pushed\n";
+    std::cout << pushfile(s.c_str(), bufaudio) << " buffers pushed\n";
 
     getline(std::cin, s);
-    std::cout << pushfile("f1.tmp", bufaudio) << " buffers pushed\n";
+    std::cout << pushfile(s.c_str(), bufaudio) << " buffers pushed\n";
 
     getline(std::cin, s);
-    std::cout << pushfile("f2.tmp", bufaudio, true) << " buffers pushed\n";
+    std::cout << pushfile(s.c_str(), bufaudio, true) << " buffers pushed\n";
+
 
     /* Wait until error or EOS */
     GstElement *pipeline = bufaudio->getPipeline();
-    GstMessage *msg = gst_bus_timed_pop_filtered(
-        gst_element_get_bus(pipeline), GST_CLOCK_TIME_NONE,
-        (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+    GstMessage *msg = gst_bus_timed_pop_filtered(gst_element_get_bus(pipeline), GST_CLOCK_TIME_NONE, (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
 
-    if (msg != NULL)
-        gst_message_unref(msg);
+    if (msg != NULL) gst_message_unref(msg);
     delete bufaudio;
 
     return 0;
