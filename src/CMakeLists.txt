@@ -67,6 +67,7 @@ add_test(test_queue "" tests/test_tsqueue.cpp)
 add_test(test_msg "" tests/test_msg.cpp message.cpp store-types.cpp lrc.cpp
   util.cpp)
 add_test(test_chunk "" tests/test_chunk.cpp chunked-file.cpp util.cpp)
+add_test(test_filesharing "" tests/test_filesharing.cpp file-sharing.cpp)
 
 set(base_srcs util.cpp store.cpp base-client.cpp message.cpp store-types.cpp
   lrc.cpp md5.cpp chunked-file.cpp file-sharing.cpp)

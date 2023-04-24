@@ -90,34 +90,34 @@ struct PrepareFileSharing {
     // this name can be a path or a checksum
     // the client classes have to decide what to use
     std::string name;
-    peer_id assigned_id_for_peer;
+    int assigned_id_for_peer;
     int dictated_segment_count = -1;
 };
 
 struct PreparedFileSharing {
     int total_segments;
-    peer_id assigned_id_for_peer;
+    int assigned_id_for_peer;
 };
 
 struct NoSuchFile {
-    peer_id assigned_id_for_peer;
+    int assigned_id_for_peer;
     std::string checksum;
 };
 
 struct GetSegment {
     int segment_id;
-    peer_id assigned_id_for_peer;
+    int assigned_id_for_peer;
 };
 
 struct ReturnSegment {
     int segment_id;
-    peer_id assigned_id_for_peer;
+    int assigned_id_for_peer;
     std::vector<char> body;
 };
 
 struct NoSuchSegment {
     int segment_id;
-    peer_id assigned_id_for_peer;
+    int assigned_id_for_peer;
 };
 
 constexpr std::string_view get_message_name(MessageType mt) {

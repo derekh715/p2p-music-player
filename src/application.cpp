@@ -547,6 +547,9 @@ void MyApplication::set_music_list() {
         AllMusic->push_back(_music);
     }
 
+    std::thread add_tracks_in_background(
+        [&collected, this]() { store.upsert_many(collected); });
+
     for (auto &r : network_tracks) {
         MusicInfoADT _music = new MusicInfoCDT;
         std::string ext =
@@ -577,23 +580,8 @@ void MyApplication::set_music_list() {
         _music->Title = r.second.track.title;
         _music->SortTitle = _music->Title.lowercase();
         _music->Checksum = r.second.track.checksum;
-        collected.push_back(convert_music_info_to_track(*_music));
         AllMusic->push_back(_music);
     }
-
-    std::thread add_tracks_in_background([&collected, this]() {
-        for (auto &c : collected) {
-            Track t;
-            // do not add that into the database if network tracks have it
-            if (store.search_with_checksum(c.checksum, t) == false ||
-                network_tracks.find(c.checksum) == network_tracks.end()) {
-                store.upsert(c);
-            } else {
-                std::cout << "Not adding this because database already has it!"
-                          << std::endl;
-            }
-        }
-    });
 
     if (AllMusicCopy == nullptr)
         AllMusicCopy = new std::vector<MusicInfoADT>;
@@ -1085,6 +1073,8 @@ void MyApplication::PauseMusic() {
     state = PAUSED;
     pButtonPlay1->set_label("Play");
     pButtonPlay1_Img->set_from_resource("/my_app/start.png");
+    // don't write to the pipeline, and don't ask for new segments!
+    fs.pause_writing();
 
     if (IsPlaying && CurrentMusic->Id >= 0) {
         gst_element_set_state(pipeline, GST_STATE_PAUSED);
@@ -1104,6 +1094,7 @@ void MyApplication::PlayMusic() {
             SystemTogglingPlayButton = true;
             pButtonPlay1->set_active(true);
             SystemTogglingPlayButton = false;
+            fs.resume_writing();
         }
         state = PLAYING;
         pButtonPlay1->set_label("Pause");
@@ -2105,12 +2096,9 @@ bool MyApplication::start_file_sharing(const std::string &checksum) {
     if (it == network_tracks.end()) {
         return false;
     }
-    std::cout << "Started transferring file with checksum: " << checksum
-              << std::endl;
     // preparing the message for each peer
     PrepareFileSharing pfs;
     pfs.name = checksum;
-    std::cout << "Calling loop!" << std::endl;
     for (auto id : it->second.ids) {
         std::cout << id << std::endl;
         Message m(MessageType::PREPARE_FILE_SHARING);
@@ -2118,7 +2106,6 @@ bool MyApplication::start_file_sharing(const std::string &checksum) {
         m << pfs;
         client->push_message(id, m);
     }
-    std::cout << "Loop finishes!" << std::endl;
     return true;
 }
 
@@ -2133,7 +2120,7 @@ void MyApplication::handle_prepare_file_sharing(MessageWithOwner &t) {
     // there is not a single file with this checksum!
     // tell that peer I don't have that file!
     if (!has_it) {
-        std::cout << "I don't know why but he hasn't got that file!!!!!!!!!!!!!"
+        std::cout << "I don't know why but he hasn't got that file!"
                   << std::endl;
         NoSuchFile nsf;
         nsf.checksum = pfs.name;
@@ -2146,7 +2133,8 @@ void MyApplication::handle_prepare_file_sharing(MessageWithOwner &t) {
     // if we have that file
     // open that audio for chunking and tell peer we have it
     std::cout << "opening file " << local.path << std::endl;
-    cf.open_file(local.path);
+    // send faster
+    cf.open_file(local.path, DEFAULT_CHUNK_SIZE * 8);
     std::cout << "size: " << cf.size << std::endl;
     Message m(MessageType::PREPARED_FILE_SHARING);
     PreparedFileSharing pfss;
@@ -2176,7 +2164,6 @@ void MyApplication::handle_prepared_file_sharing(MessageWithOwner &t) {
 
 // NOTE: this is when ANOTHER PEER returns you a segment
 void MyApplication::handle_return_segment(MessageWithOwner &t) {
-    std::cout << "0" << std::endl;
     ReturnSegment rps;
     t.msg >> rps;
     fs.end_timeout(rps.assigned_id_for_peer);
@@ -2187,7 +2174,7 @@ void MyApplication::handle_return_segment(MessageWithOwner &t) {
     fs.push_segment(rps);
     Message m(MessageType::GET_SEGMENT);
     // all segments are returned, ending...
-    if (fs.all_segments_asked()) {
+    if (fs.all_segments_asked() || fs.paused()) {
         return;
     }
     GetSegment gps;

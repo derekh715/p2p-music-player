@@ -43,19 +43,21 @@ class FileSharing {
     bool is_peer_dead(int assigned_id);
     bool is_peer_idle(int assigned_id);
 
+    void pause_writing();
+    void resume_writing();
+    bool paused();
+
   private:
     std::vector<std::queue<ReturnSegment>> queue_buffer;
     int current_segment_id = -1;
     int current_byte = 0;
     int current_writing_id = 0;
     std::ofstream os;
-    int current_assigned_id = -1;
+    int current_assigned_id = 0;
     int total_segment_count;
     bool block_write = false;
 
     void write_segment(const ReturnSegment &rps);
-    void pause_writing();
-    void resume_writing();
 
     uint8_t increment_failure(uint8_t state);
     uint8_t set_idle(uint8_t state);
