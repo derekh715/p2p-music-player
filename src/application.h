@@ -396,7 +396,7 @@ private:
      * This function process the returned bytes
      * It will be invoked asyncronously
      */
-    void segment_has_arrived(ReturnSegment rs, bool end);
+    void segment_has_arrived(const ReturnSegment &rs, bool end);
 
     /*
      * used by peer WHO IS RECEIVING A FILE

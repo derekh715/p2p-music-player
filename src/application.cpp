@@ -496,6 +496,7 @@ void MyApplication::on_hide_window(Gtk::ApplicationWindow *pApplicationWindow) {
 }
 
 void MyApplication::MusicListChanged() {
+    std::cout << "[MUSIC LIST CHANGED]" << std::endl;
     resorting = true;
     PauseMusic();
     CurrentMusic = EmptyMusic;
@@ -513,6 +514,7 @@ void MyApplication::MusicListChanged() {
 
     if (PlayMode == SHUFFLE_ON)
         Shuffle();
+    std::cout << "[MUSIC LIST CHANGE ENDS]" << std::endl;
 }
 
 void MyApplication::set_music_list() {
@@ -581,8 +583,14 @@ void MyApplication::set_music_list() {
         AllMusic->push_back(_music);
     }
 
-    std::thread add_tracks_in_background(
-        [&collected, this]() { store.upsert_many(collected); });
+    std::thread add_tracks_in_background([&collected, this]() {
+        for (auto &c : collected) {
+            // do not add that into the database if network tracks have it
+            if (network_tracks.find(c.checksum) == network_tracks.end()) {
+                store.upsert(c);
+            }
+        }
+    });
     if (AllMusicCopy == nullptr)
         AllMusicCopy = new std::vector<MusicInfoADT>;
     else
@@ -1753,11 +1761,12 @@ void MyApplication::on_ButtonAddIp1_clicked() {
     // so smatch will be { full, four octets, port }
     if (boost::regex_match(
             NewIp, smatch,
-            boost::regex(
-                "^((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?\\.)"
-                "{3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
-                "):?(\\d{4,5})?$"))) // ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
-    {
+            // boost::regex(
+            //     "^((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?\\.)"
+            //     "{3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+            //     "):?(\\d{4,5})?$"))) //
+            //     ^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$
+            boost::regex("^((?:\\d{1,3}\\.){3}\\d{1,3}):?(\\d{4,5})?$"))) {
         std::string port_no = "4000";
         // I added this line, so that when a new ip is added, it will attempt
         // to connect to that ip immediately
@@ -1770,6 +1779,7 @@ void MyApplication::on_ButtonAddIp1_clicked() {
         bool success = client->connect_to_peer(smatch[1], port_no);
         // if the ip cannot be resolved, don't add it to the ip list
         if (!success) {
+            std::cout << "Failed for some reason!!!!!" << std::endl;
             return;
         }
         IpsChanged = true;
@@ -1823,7 +1833,7 @@ void MyApplication::update_tree_model3() {
     }
 }
 
-void MyApplication::segment_has_arrived(ReturnSegment rs, bool end) {
+void MyApplication::segment_has_arrived(const ReturnSegment &rs, bool end) {
     // What is ReturnSegment?
     // a ReturnSegment is message returned by a peer
     // inside there is a body field, which contains a vector of bytes
@@ -1835,7 +1845,8 @@ void MyApplication::segment_has_arrived(ReturnSegment rs, bool end) {
     // What is end?
     // if end is on, that means the entire file is sent.
     // after that no segment should be sent (I hope so)
-
+    std::cout << "This is fine: " << rs.segment_id
+              << " size: " << rs.body.size() << std::endl;
     bfa->pushBuffer(rs.body.data(), rs.body.size());
     if (end)
         bfa->pushEOS();
@@ -1990,7 +2001,7 @@ void MyApplication::remove_network_tracks(peer_id id) {
         std::cout << std::endl;
         // remove that peer id from the ids array
         it->second.ids.erase(
-            std::find(it->second.ids.begin(), it->second.ids.end(), id));
+            std::remove(it->second.ids.begin(), it->second.ids.end(), id));
         // if the array has no ids, that means no peer owns that track
         // remove it
         if (it->second.ids.empty()) {
@@ -2095,12 +2106,15 @@ bool MyApplication::start_file_sharing(const std::string &checksum) {
     // preparing the message for each peer
     PrepareFileSharing pfs;
     pfs.name = checksum;
+    std::cout << "Calling loop!" << std::endl;
     for (auto id : it->second.ids) {
+        std::cout << id << std::endl;
         Message m(MessageType::PREPARE_FILE_SHARING);
         pfs.assigned_id_for_peer = fs.new_peer(id);
         m << pfs;
         client->push_message(id, m);
     }
+    std::cout << "Loop finishes!" << std::endl;
     return true;
 }
 
@@ -2115,6 +2129,8 @@ void MyApplication::handle_prepare_file_sharing(MessageWithOwner &t) {
     // there is not a single file with this checksum!
     // tell that peer I don't have that file!
     if (!has_it) {
+        std::cout << "I don't know why but he hasn't got that file!!!!!!!!!!!!!"
+                  << std::endl;
         NoSuchFile nsf;
         nsf.checksum = pfs.name;
         nsf.assigned_id_for_peer = pfs.assigned_id_for_peer;
@@ -2125,7 +2141,9 @@ void MyApplication::handle_prepare_file_sharing(MessageWithOwner &t) {
     }
     // if we have that file
     // open that audio for chunking and tell peer we have it
+    std::cout << "opening file " << local.path << std::endl;
     cf.open_file(local.path);
+    std::cout << "size: " << cf.size << std::endl;
     Message m(MessageType::PREPARED_FILE_SHARING);
     PreparedFileSharing pfss;
     pfss.total_segments = cf.total_segments;

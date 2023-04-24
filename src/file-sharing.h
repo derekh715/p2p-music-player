@@ -18,8 +18,8 @@ class FileSharing {
 
     // see if there is any segment in the queue, if there is
     // call write_segment are written
-    void
-    try_writing_segment(std::function<void(ReturnSegment, bool)> write_segment);
+    void try_writing_segment(
+        std::function<void(const ReturnSegment &, bool)> write_segment);
     int get_next_assigned_id();
 
     void push_segment(ReturnSegment rps);
