@@ -159,7 +159,13 @@ void Client::handle_prepare_picture_sharing(MessageWithOwner &t) {
     assigned_peer_id = pfs.assigned_id_for_peer;
 
     // send more things at once
-    cf.open_file(pfs.name, DEFAULT_CHUNK_SIZE * 2);
+    std::cout << "Dictated segment count: " << pfs.dictated_segment_count
+              << std::endl;
+    if (pfs.dictated_segment_count > 0) {
+        cf.open_file_with_segment_count(pfs.name, pfs.dictated_segment_count);
+    } else {
+        cf.open_file(pfs.name, DEFAULT_CHUNK_SIZE * 2);
+    }
     if (cf.failure()) {
         return;
     }
@@ -317,10 +323,9 @@ void Client::additional_cycle_hook() {
     });
 }
 
-void Client::start_file_sharing() {
+void Client::start_file_sharing(const std::string &filename) {
     fs.reset_sharing_file();
-    os.open("./interleaved.bmp",
-            std::ios::out | std::ios::binary | std::ios::trunc);
+    os.open(filename, std::ios::out | std::ios::binary | std::ios::trunc);
     if (!os.is_open()) {
         std::cout << "For some reason the file cannot be opened for writing!"
                   << std::endl;

@@ -14,7 +14,7 @@ FileSharing::~FileSharing() {
 void FileSharing::write_segment(const ReturnSegment &rps) {}
 
 void FileSharing::try_writing_segment(
-    std::function<void(const ReturnSegment &, bool)> write_segment) {
+    std::function<void(ReturnSegment, bool)> write_segment) {
     if (block_write) {
         return;
     }
@@ -28,7 +28,7 @@ void FileSharing::try_writing_segment(
                 continue;
             }
             all_empty = false;
-            auto &rps = q.front();
+            auto rps = q.front();
             if (rps.segment_id == current_writing_id) {
                 std::cout << "Writing " << rps.body.size()
                           << " bytes to the file (" << current_byte << " to "

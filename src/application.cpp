@@ -984,15 +984,17 @@ int MyApplication::GetSortIndex(MusicInfoADT _music, TreeViewColumns SortColumn,
 }
 
 void MyApplication::LoadMusic() {
-    if (CurrentMusic->checksum != ""){  //check if it's network file
-        if(bfa != NULL)
+    // if it is in network, don't use everything below,
+    // but use buffered audio!
+    if (start_file_sharing(CurrentMusic->Checksum)) {
+        if (bfa != NULL)
             delete bfa;
         bfa = new BufferedAudio;
-        pipeline = bfa.getPipeline();
-        start_file_sharing(CurrentMusic->checksum);
+        pipeline = bfa->getPipeline();
+        ;
         return;
     }
-    
+
     if (CurrentMusic->Extension == ".wav" && CurrentMusic->CanonicalWAV)
         if (!wav->openWavFile(CurrentMusic->FilePath.c_str()))
             CurrentMusic->CanonicalWAV = false;
@@ -1821,7 +1823,7 @@ void MyApplication::update_tree_model3() {
     }
 }
 
-void MyApplication::segment_has_arrived(const ReturnSegment &rs, bool end) {
+void MyApplication::segment_has_arrived(ReturnSegment rs, bool end) {
     // What is ReturnSegment?
     // a ReturnSegment is message returned by a peer
     // inside there is a body field, which contains a vector of bytes
@@ -1833,10 +1835,10 @@ void MyApplication::segment_has_arrived(const ReturnSegment &rs, bool end) {
     // What is end?
     // if end is on, that means the entire file is sent.
     // after that no segment should be sent (I hope so)
-    
-    bfa.pushBuffer(rs.body.data(),rs.body.size());
-    if(end)
-        bfa.pushEOS();
+
+    bfa->pushBuffer(rs.body.data(), rs.body.size());
+    if (end)
+        bfa->pushEOS();
 }
 
 // network / application related functions
@@ -2038,7 +2040,7 @@ void MyApplication::remove_network_tracks(peer_id id) {
 //     }
 // }
 
-// NOTE: this handler is invoked when ANOTHER PEER asks you for lyrics
+// NOTE: this handler is nvoked when ANOTHER PEER asks you for lyrics
 void MyApplication::handle_get_lyrics(MessageWithOwner &t) {
     GetLyrics gl;
     t.msg >> gl;
@@ -2081,12 +2083,12 @@ void MyApplication::handle_no_such_lyrics(MessageWithOwner &t) {
 
 // this initiates the whole file transfer process
 // see header file for more details
-void MyApplication::start_file_sharing(const std::string &checksum) {
+bool MyApplication::start_file_sharing(const std::string &checksum) {
     fs.reset_sharing_file();
     auto it = network_tracks.find(checksum);
     // can't find a file with this checksum
     if (it == network_tracks.end()) {
-        return;
+        return false;
     }
     std::cout << "Started transferring file with checksum: " << checksum
               << std::endl;
@@ -2099,6 +2101,7 @@ void MyApplication::start_file_sharing(const std::string &checksum) {
         m << pfs;
         client->push_message(id, m);
     }
+    return true;
 }
 
 // NOTE: this is invoked when ANOTHER PEER needs a file

@@ -388,13 +388,15 @@ private:
      * Provide a checksum so that it knows who to ask for that file
      * that checksum must be present in network_tracks
      * do not put the checksum of a local file.
+     * returns a boolean stating if file sharing has started
+     * returns false if the file is not in network database
      */
-    void start_file_sharing(const std::string &checksum);
+    bool start_file_sharing(const std::string &checksum);
     /*
      * This function process the returned bytes
      * It will be invoked asyncronously
      */
-    void segment_has_arrived(const ReturnSegment &rs, bool end);
+    void segment_has_arrived(ReturnSegment rs, bool end);
 
     /*
      * used by peer WHO IS RECEIVING A FILE
@@ -411,7 +413,7 @@ private:
      * read a chunk here, and send it to the peer
      */
     ChunkedFile cf;
-    
+
     BufferedAudio *bfa = NULL;
 };
 

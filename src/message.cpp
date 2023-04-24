@@ -136,11 +136,11 @@ Message &operator>>(Message &m, NoSuchLyrics &d) {
 MessageHeader::MessageHeader(MessageType t) : type(t) {}
 
 Message &operator<<(Message &m, const PrepareFileSharing &d) {
-    m << d.name << d.assigned_id_for_peer;
+    m << d.name << d.assigned_id_for_peer << d.dictated_segment_count;
     return m;
 }
 Message &operator>>(Message &m, PrepareFileSharing &d) {
-    m >> d.assigned_id_for_peer >> d.name;
+    m >> d.dictated_segment_count >> d.assigned_id_for_peer >> d.name;
     return m;
 }
 

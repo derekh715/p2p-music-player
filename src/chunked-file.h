@@ -11,7 +11,6 @@
 namespace fs = std::filesystem;
 
 #define DEFAULT_CHUNK_SIZE 16384
-
 /*
  * This class represents a file that can be accessed in chunks
  * For example, if you want to access chunk 15 of the file, get(15, body) can be
@@ -27,6 +26,7 @@ struct ChunkedFile {
     ~ChunkedFile();
 
     void open_file(fs::path path, int chunk_size = DEFAULT_CHUNK_SIZE);
+    void open_file_with_segment_count(fs::path path, int segment_count);
     void close();
 
     // randomly get a segment from the file

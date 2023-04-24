@@ -75,8 +75,9 @@ set(base_srcs util.cpp store.cpp base-client.cpp message.cpp store-types.cpp
 # add source files here
 # p2pmss will be the executable that has the main function
 add_executable(p2pmss main.cpp application.cpp
-  wav.cpp listfiles.cpp application-client.cpp ${base_srcs})
+  wav.cpp listfiles.cpp application-client.cpp bufferedaudio.cpp ${base_srcs})
 add_executable(network network-example.cpp client.cpp ${base_srcs})
+add_executable(buffered-audio BufferedAudioTest.cpp bufferedaudio.cpp)
 # we link p2pmss with the necessary libraries like gtkmm4
 target_link_libraries(p2pmss PRIVATE
   SQLiteCpp
@@ -90,3 +91,10 @@ target_link_libraries(p2pmss PRIVATE
   PkgConfig::asio
 )
 target_link_libraries(network PRIVATE PkgConfig::asio SQLiteCpp)
+target_link_libraries(buffered-audio PRIVATE
+  PkgConfig::gstreamer
+  PkgConfig::gstreamer-sdp
+  PkgConfig::gstreamer-app
+  PkgConfig::gstreamer-video
+  PkgConfig::gstreamer-audio
+)

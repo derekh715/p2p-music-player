@@ -91,6 +91,7 @@ struct PrepareFileSharing {
     // the client classes have to decide what to use
     std::string name;
     peer_id assigned_id_for_peer;
+    int dictated_segment_count = -1;
 };
 
 struct PreparedFileSharing {

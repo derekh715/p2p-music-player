@@ -39,7 +39,7 @@ class Client : public BaseClient {
 
     void cycle();
     void additional_cycle_hook();
-    void start_file_sharing();
+    void start_file_sharing(const std::string &filename);
     FileSharing fs;
 
   private:

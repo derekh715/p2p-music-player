@@ -63,7 +63,7 @@ void get_lyrics_file(Client &c) {
 
 void ask_for_picture_file(Client &c) {
     std::cout << "Ask for the images!!!!" << std::endl;
-    c.start_file_sharing();
+    c.start_file_sharing("./interleaved.bmp");
     PrepareFileSharing pfs;
     for (auto p : c.get_peers()) {
         Message m(MessageType::PREPARE_FILE_SHARING);
@@ -74,6 +74,27 @@ void ask_for_picture_file(Client &c) {
         char filename[30];
         sprintf(filename, "1-%d.bmp", pfs.assigned_id_for_peer + 1);
         path /= filename;
+        pfs.name = path;
+        m << pfs;
+        c.push_message(p.first, m);
+    }
+}
+
+void ask_for_file(Client &c) {
+    std::cout << "Enter file path (currently in"
+              << std::filesystem::current_path() << "): " << std::endl;
+    std::string filepath;
+    std::cin >> filepath;
+    c.start_file_sharing("./received");
+    PrepareFileSharing pfs;
+    // only divide the file into 100 parts
+    pfs.dictated_segment_count = 100;
+    for (auto p : c.get_peers()) {
+        Message m(MessageType::PREPARE_FILE_SHARING);
+        pfs.assigned_id_for_peer = c.fs.new_peer(p.first);
+        // change this path if you start the application in a different
+        // directory
+        fs::path path(filepath);
         pfs.name = path;
         m << pfs;
         c.push_message(p.first, m);
@@ -111,6 +132,7 @@ int main(int argc, char **argv) {
                   << "F) Ask for lyrics\n"
                   << "G) Ask for the interleaving images\n"
                   << "H) Ask for the database of a client\n"
+                  << "I) Ask for a file\n"
                   << "Q) Quit" << std::endl;
         char c;
         std::cin >> c;
@@ -146,6 +168,9 @@ int main(int argc, char **argv) {
             break;
         case 'H':
             ask_for_database(cl);
+            break;
+        case 'I':
+            ask_for_file(cl);
             break;
         case 'Q':
             exit(0);
