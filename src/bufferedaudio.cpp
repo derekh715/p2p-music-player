@@ -1,11 +1,11 @@
 #include "bufferedaudio.h"
 
-BufferedAudio::BufferedAudio(){
+BufferedAudio::BufferedAudio(std::string ext){
     if(!gst_is_initialized())
         gst_init (NULL, NULL);
 
-    char parse[] = "appsrc name=myappsrc max-bytes=0 ! queue name=myqueue min-threshold-buffers=1 ! decodebin ! audioconvert ! audioresample ! spectrum interval=50000000 bands=128 ! autoaudiosink";
-    pipeline = gst_parse_launch(parse, NULL);
+    std::string parse = (std::string)"appsrc name=myappsrc max-bytes=0 ! queue name=myqueue min-threshold-buffers=1 ! " + decoder.at(ext) + " ! audioconvert ! audioresample ! spectrum interval=50000000 bands=128 ! autoaudiosink";
+    pipeline = gst_parse_launch(parse.c_str(), NULL);
     appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "myappsrc");
     GstElement *queue = gst_bin_get_by_name(GST_BIN(pipeline), "myqueue");
 
@@ -70,3 +70,11 @@ void BufferedAudio::pause_pipeline(){
     }else
         push_data();
 }
+
+const std::map<std::string, std::string> BufferedAudio::decoder = {
+    {".mp3",    "decodebin"},               // OK
+    {".wav",    "wavparse"},                // OK
+    {".m4a",    "decodebin"},           // need whole file
+    {".ogg",    "oggdemux ! vorbisdec"},    // OK
+    {".flac",   "flacparse ! flacdec"}  // sometimes fail
+};
