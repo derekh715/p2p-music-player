@@ -4,19 +4,23 @@
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
 #include <algorithm>
+#include <string>
 #include <deque>
+#include <map>
 
 class BufferedAudio;
 
 class BufferedAudio{
     public:
-        BufferedAudio();
+        BufferedAudio(std::string ext);
         ~BufferedAudio();
         GstElement *getPipeline();
         void pushBuffer(const char *buffer, guint32 size);
         void pushEOS();
 
     private:
+        const static std::map<std::string, std::string> decoder;
+
         std::deque<GstBuffer *> data;
         GstElement *pipeline, *appsrc;
         bool pipeline_paused, eos;
