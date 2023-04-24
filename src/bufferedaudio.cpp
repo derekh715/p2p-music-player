@@ -40,7 +40,9 @@ GstElement *BufferedAudio::getPipeline(){
     return pipeline;
 }
 
-void BufferedAudio::pushBuffer(char *buffer, guint32 size){
+void BufferedAudio::pushBuffer(const char *cbuffer, guint32 size){
+    char *buffer = new char[size + 1];
+    std::copy_n(cbuffer, size, buffer);
     data.push_back(gst_buffer_new_wrapped(buffer, size));
     if(pipeline_paused){
         gst_element_set_state (pipeline, GST_STATE_PLAYING);
