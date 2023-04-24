@@ -1,9 +1,7 @@
 #include "file-sharing.h"
-#include <asio/prefer.hpp>
-#include <bitset>
 
 FileSharing::FileSharing() {
-    block_write = false;
+    pause = false;
     worker = std::thread([this]() { ctx.run(); });
 }
 
@@ -17,8 +15,7 @@ void FileSharing::write_segment(const ReturnSegment &rps) {}
 
 void FileSharing::try_writing_segment(
     std::function<void(const ReturnSegment &, bool)> write_segment) {
-    std::cout << "TRY WRITING SEGMENT " << block_write << std::endl;
-    if (block_write) {
+    if (pause || hard_pause) {
         return;
     }
     bool all_empty = true;
@@ -32,6 +29,8 @@ void FileSharing::try_writing_segment(
             }
             all_empty = false;
             auto &rps = q.front();
+            // std::cout << "RPS: " << rps.segment_id
+            //           << " | CWI: " << current_writing_id << std::endl;
             if (rps.segment_id == current_writing_id) {
                 std::cout << "Writing " << rps.body.size()
                           << " bytes to the file (" << current_byte << " to "
@@ -41,6 +40,7 @@ void FileSharing::try_writing_segment(
                 current_byte += rps.body.size();
                 bool end = ++current_writing_id >= total_segment_count;
                 write_segment(rps, end);
+                queue_current_bytes -= bytes_per_chunk;
                 q.pop();
                 // all requests needed are made, exit now
                 if (end) {
@@ -49,6 +49,10 @@ void FileSharing::try_writing_segment(
             } else if (rps.segment_id < current_writing_id) {
                 // if current_writing_id is over already, drop that segment
                 // without writing
+                q.pop();
+            } else if (rps.segment_id > current_writing_id + status.size()) {
+                // also pop very high segment numbers since they block the
+                // queue!
                 q.pop();
             }
         }
@@ -65,17 +69,28 @@ void FileSharing::reset_sharing_file() {
     current_segment_id = -1;
     total_segment_count = 0;
     current_byte = 0;
-    current_assigned_id = -1;
+    current_assigned_id = 0;
+    current_writing_id = 0;
     peer_map.clear();
     status.clear();
     timeout_timers.clear();
-    block_write = false;
+    pause = false;
+    bytes_per_chunk = 0;
+    queue_current_bytes = 0;
+    total_bytes = 0;
+    hard_pause = false;
+    // also drop all the previous buffers
+    queue_buffer = std::vector<std::queue<ReturnSegment>>();
     // open_file_for_writing();
 }
 
-bool FileSharing::paused() { return block_write; }
+bool FileSharing::paused() { return pause; }
 
 void FileSharing::push_segment(ReturnSegment rps) {
+    if (!is_in_range(rps.assigned_id_for_peer)) {
+        return;
+    }
+    queue_current_bytes += bytes_per_chunk;
     queue_buffer[rps.assigned_id_for_peer].push(rps);
 }
 int FileSharing::get_next_segment_id() { return ++current_segment_id; }
@@ -97,6 +112,9 @@ int FileSharing::new_peer(peer_id id) {
 }
 
 void FileSharing::start_timeout(int assigned_id) {
+    if (!is_in_range(assigned_id)) {
+        return;
+    }
     // try to wait for 10s
     // if nothing is returned set the waiting bit to be true
     timeout_timers[assigned_id].expires_from_now(10s);
@@ -107,12 +125,15 @@ void FileSharing::start_timeout(int assigned_id) {
     });
 }
 void FileSharing::end_timeout(int assigned_id) {
+    if (!is_in_range(assigned_id)) {
+        return;
+    }
     timeout_timers[assigned_id].cancel();
 }
 
 void FileSharing::if_idle(std::function<void(int)> handler) {
     // don't do anything if paused
-    if (block_write) {
+    if (pause || hard_pause) {
         return;
     }
     for (int i = 0; i < status.size(); i++) {
@@ -127,13 +148,25 @@ void FileSharing::if_idle(std::function<void(int)> handler) {
 int FileSharing::get_peer_id(int assigned_id) { return peer_map[assigned_id]; }
 
 void FileSharing::pause_writing() {
-    block_write = true;
+    pause = true;
     for (int i = 0; i < status.size(); i++) {
+        timeout_timers[i].cancel();
         set_peer_idle(i);
     }
 }
 
-void FileSharing::resume_writing() { block_write = false; }
+void FileSharing::must_pause() {
+    // no matter what you must pause sharing!!
+    hard_pause = true;
+    for (int i = 0; i < status.size(); i++) {
+        timeout_timers[i].cancel();
+        set_peer_idle(i);
+    }
+}
+
+void FileSharing::stop_must_pause() { hard_pause = false; }
+
+void FileSharing::resume_writing() { pause = false; }
 
 uint8_t FileSharing::increment_failure(uint8_t state) {
     uint8_t original_failure = state & 0b11;
@@ -154,22 +187,64 @@ bool FileSharing::is_dead(uint8_t state) { return (state & 0b1000) != 0; }
 bool FileSharing::is_idle(uint8_t state) { return (state & 0b100) != 0; }
 
 void FileSharing::increment_peer_failure(int assigned_id) {
+    if (!is_in_range(assigned_id)) {
+        return;
+    }
     status[assigned_id] = increment_failure(status[assigned_id]);
 }
 void FileSharing::set_peer_idle(int assigned_id) {
+    if (!is_in_range(assigned_id)) {
+        return;
+    }
     status[assigned_id] = set_idle(status[assigned_id]);
 }
 void FileSharing::unset_peer_idle(int assigned_id) {
+    if (!is_in_range(assigned_id)) {
+        return;
+    }
     status[assigned_id] = unset_idle(status[assigned_id]);
 }
 void FileSharing::die_peer(int assigned_id) {
+    if (!is_in_range(assigned_id)) {
+        return;
+    }
     status[assigned_id] = die(status[assigned_id]);
 }
 
 bool FileSharing::is_peer_dead(int assigned_id) {
+    if (!is_in_range(assigned_id)) {
+        return false;
+    }
     return is_dead(status[assigned_id]);
 }
 
 bool FileSharing::is_peer_idle(int assigned_id) {
+    if (!is_in_range(assigned_id)) {
+        return false;
+    }
     return is_idle(status[assigned_id]);
+}
+
+bool FileSharing::is_in_range(int assigned_id) {
+    return assigned_id > -1 && assigned_id < current_assigned_id;
+}
+
+void FileSharing::should_pause() {
+    if (total_bytes == 0 || hard_pause) {
+        return;
+    }
+    // std::cout << "QCB: " << queue_current_bytes
+    //           << " | TB: " << total_bytes * 0.5 << " ("
+    //           << (double)queue_current_bytes / total_bytes * 100 << "%)"
+    //           << std::endl;
+    if ((double)queue_current_bytes > total_bytes * 0.5) {
+        pause_writing();
+    } else {
+        resume_writing();
+    }
+}
+
+void FileSharing::set_file_info(int b, int t) {
+    bytes_per_chunk = b;
+    total_bytes = t;
 }

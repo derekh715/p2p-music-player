@@ -97,6 +97,8 @@ struct PrepareFileSharing {
 struct PreparedFileSharing {
     int total_segments;
     int assigned_id_for_peer;
+    int bytes_per_chunk;
+    int total_bytes;
 };
 
 struct NoSuchFile {

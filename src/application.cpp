@@ -1071,6 +1071,7 @@ void MyApplication::PauseMusic() {
     pButtonPlay1->set_active(false);
     SystemTogglingPlayButton = false;
     state = PAUSED;
+    fs.must_pause();
     pButtonPlay1->set_label("Play");
     pButtonPlay1_Img->set_from_resource("/my_app/start.png");
     // don't write to the pipeline, and don't ask for new segments!
@@ -1094,7 +1095,7 @@ void MyApplication::PlayMusic() {
             SystemTogglingPlayButton = true;
             pButtonPlay1->set_active(true);
             SystemTogglingPlayButton = false;
-            fs.resume_writing();
+            fs.stop_must_pause();
         }
         state = PLAYING;
         pButtonPlay1->set_label("Pause");
@@ -1840,8 +1841,6 @@ void MyApplication::segment_has_arrived(const ReturnSegment &rs, bool end) {
     // What is end?
     // if end is on, that means the entire file is sent.
     // after that no segment should be sent (I hope so)
-    std::cout << "This is fine: " << rs.segment_id
-              << " size: " << rs.body.size() << std::endl;
     bfa->pushBuffer(rs.body.data(), rs.body.size());
     if (end)
         bfa->pushEOS();
@@ -1986,22 +1985,13 @@ void MyApplication::handle_return_database(MessageWithOwner &t) {
 }
 
 void MyApplication::remove_network_tracks(peer_id id) {
-    std::cout << "[REMOVE NETWORK TRACKS] matching: " << id << std::endl;
     for (auto it = network_tracks.begin(); it != network_tracks.end();) {
-        std::cout << it->second.track << std::endl;
-        std::cout << "Ids: ";
-        for (auto &id : it->second.ids) {
-            std::cout << id << " ";
-        }
-        std::cout << std::endl;
         // remove that peer id from the ids array
         it->second.ids.erase(
             std::remove(it->second.ids.begin(), it->second.ids.end(), id));
         // if the array has no ids, that means no peer owns that track
         // remove it
         if (it->second.ids.empty()) {
-            std::cout << "Removed this record " << it->second.track
-                      << std::endl;
             network_tracks.erase(it++);
         } else {
             ++it;
@@ -2100,7 +2090,6 @@ bool MyApplication::start_file_sharing(const std::string &checksum) {
     PrepareFileSharing pfs;
     pfs.name = checksum;
     for (auto id : it->second.ids) {
-        std::cout << id << std::endl;
         Message m(MessageType::PREPARE_FILE_SHARING);
         pfs.assigned_id_for_peer = fs.new_peer(id);
         m << pfs;
@@ -2140,6 +2129,8 @@ void MyApplication::handle_prepare_file_sharing(MessageWithOwner &t) {
     PreparedFileSharing pfss;
     pfss.total_segments = cf.total_segments;
     pfss.assigned_id_for_peer = pfs.assigned_id_for_peer;
+    pfss.bytes_per_chunk = cf.chunk_size;
+    pfss.total_bytes = cf.size;
     m << pfss;
     client->push_message(t.id, m);
 }
@@ -2152,6 +2143,7 @@ void MyApplication::handle_prepared_file_sharing(MessageWithOwner &t) {
     PreparedFileSharing pps;
     t.msg >> pps;
     fs.set_segment_count(pps.total_segments);
+    fs.set_file_info(pps.bytes_per_chunk, pps.total_bytes);
     Message m(MessageType::GET_SEGMENT);
     GetSegment gps;
     gps.segment_id = fs.get_next_segment_id();
@@ -2218,6 +2210,7 @@ void MyApplication::handle_get_segment(MessageWithOwner &t) {
 
 // do more stuff besides the main cycle
 void MyApplication::additional_cycle_hook() {
+    fs.should_pause();
     fs.try_writing_segment([this](const ReturnSegment &rs, bool end) {
         segment_has_arrived(rs, end);
     });
@@ -2230,6 +2223,7 @@ void MyApplication::additional_cycle_hook() {
         Message m(MessageType::GET_SEGMENT);
         GetSegment gps;
         gps.segment_id = fs.get_next_segment_id();
+        gps.assigned_id_for_peer = assigned_peer_id;
         m << gps;
         client->push_message(fs.get_peer_id(assigned_peer_id), m);
     });

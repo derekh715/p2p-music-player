@@ -46,6 +46,10 @@ class FileSharing {
     void pause_writing();
     void resume_writing();
     bool paused();
+    void set_file_info(int byte_per_chunk, int total_bytes);
+    void should_pause();
+    void must_pause();
+    void stop_must_pause();
 
   private:
     std::vector<std::queue<ReturnSegment>> queue_buffer;
@@ -55,7 +59,8 @@ class FileSharing {
     std::ofstream os;
     int current_assigned_id = 0;
     int total_segment_count;
-    bool block_write = false;
+    bool pause = false;
+    bool hard_pause = false;
 
     void write_segment(const ReturnSegment &rps);
 
@@ -65,6 +70,7 @@ class FileSharing {
     uint8_t die(uint8_t state);
     bool is_dead(uint8_t state);
     bool is_idle(uint8_t state);
+    bool is_in_range(int assigned_id);
 
     // this flag will be for peer if it is idling (the queue is full) or
     // the there is no response from the peer
@@ -73,6 +79,9 @@ class FileSharing {
     asio::io_context ctx;
     std::thread worker;
     std::vector<int> peer_map;
+    int total_bytes;
+    int queue_current_bytes;
+    int bytes_per_chunk;
 };
 
 #endif

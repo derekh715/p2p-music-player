@@ -4,17 +4,31 @@ BaseClient::BaseClient(uint16_t port, std::chrono::milliseconds time)
     : acceptor(ctx, tcp::endpoint(tcp::v4(), port)), resolver(ctx),
       timer(ctx), cycle_time{time} {
     acceptor.set_option(tcp::acceptor::reuse_address(true));
-    acceptor.listen();
+    try {
+        acceptor.listen();
+    } catch (...) {
+    }
     trap_signal();
     accept_socket();
-    worker = std::thread([this]() { ctx.run(); });
+    worker = std::thread([this]() {
+        std::error_code ec;
+        ctx.run(ec);
+        if (ec) {
+            std::cout << "Running context: " << ec.message() << std::endl;
+        }
+    });
 }
 
 BaseClient::~BaseClient() {
     // disconnect all sockets
     for (auto &p : peers) {
-        p.second->shutdown(tcp::socket::shutdown_send);
-        p.second->close();
+        asio::error_code ec;
+        p.second->shutdown(tcp::socket::shutdown_send, ec);
+        if (!ec) {
+            p.second->close(ec);
+        } else {
+            std::cout << "a socket cannot be shutdown. just ignore him.";
+        }
     }
     // context, you can stop now!
     if (worker.joinable()) {
@@ -28,8 +42,9 @@ void BaseClient::trap_signal() {
     sigs.async_wait([&](asio::error_code ec, int signal) {
         if (!ec) {
             std::cout << "Signal received: " << signal << std::endl;
-            acceptor.cancel();
-            timer.cancel();
+            std::error_code ec1;
+            acceptor.cancel(ec1);
+            timer.cancel(ec1);
         } else {
             std::cout << std::endl << ec.message() << std::endl;
         }
@@ -63,7 +78,8 @@ void BaseClient::add_to_peers(std::shared_ptr<tcp::socket> socket) {
     peers[current_id] = socket;
     reverse[socket] = current_id;
     if (socket->is_open()) {
-        auto re = socket->remote_endpoint();
+        asio::error_code ec2;
+        auto re = socket->remote_endpoint(ec2);
         peer_ip_map[current_id] = ConnectionInfo{
             .address = re.address().to_string(),
             .port = re.port(),
@@ -90,7 +106,8 @@ bool BaseClient::connect_to_peer(const std::string &host,
                             std::cout << "[CONNECT TO PEER] specified: " << spec
                                       << " " << ec.message();
                             if (!ec) {
-                                auto re = p->remote_endpoint();
+                                asio::error_code ec2;
+                                auto re = p->remote_endpoint(ec2);
                                 std::cout << " actual: " << re;
                                 peer_ip_map[current_id - 1] = ConnectionInfo{
                                     .address = re.address().to_string(),
@@ -195,8 +212,9 @@ void BaseClient::remove_socket(peer_id id) {
         auto rit = reverse.find(it->second);
         peers.erase(it);
         reverse.erase(rit);
-        it->second->shutdown(tcp::socket::shutdown_send);
-        it->second->close();
+        asio::error_code ec;
+        it->second->shutdown(tcp::socket::shutdown_send, ec);
+        it->second->close(ec);
         on_disconnect(id);
     }
 }
@@ -207,8 +225,9 @@ void BaseClient::remove_socket(std::shared_ptr<tcp::socket> socket) {
         auto rit = peers.find(it->second);
         reverse.erase(it);
         peers.erase(rit);
-        socket->shutdown(tcp::socket::shutdown_send);
-        socket->close();
+        asio::error_code ec;
+        socket->shutdown(tcp::socket::shutdown_send, ec);
+        socket->close(ec);
         on_disconnect(it->second);
     }
 }

@@ -1,7 +1,7 @@
 #include "client.h"
 
 Client::Client(uint16_t port, const std::string &filename)
-    : s(false, filename), BaseClient(port, 500ms) {
+    : s(false, filename), BaseClient(port, 750ms) {
     cycle();
 }
 
@@ -201,6 +201,7 @@ void Client::handle_return_picture_segment(MessageWithOwner &t) {
               << fs.get_segment_count() - 1 << " received from client " << t.id
               << " share id: " << rps.assigned_id_for_peer << std::endl;
     fs.push_segment(rps);
+    std::cout << "Pushed segment to fs! " << std::endl;
     Message m(MessageType::GET_SEGMENT);
     // it is enough
     if (fs.all_segments_asked()) {

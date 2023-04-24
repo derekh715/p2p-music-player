@@ -33,12 +33,16 @@ int main(int argc, char **argv) {
     }
     auto application = MyApplication::create(database_file, port);
 
-    // apparently gtk hates command line arguments? Why?
-    if (argc == 3) {
-        return application->run(argc - 2, argv);
-    } else if (argc == 2) {
-        return application->run(argc - 1, argv);
-    }
+    try {
+        // apparently gtk hates command line arguments? Why?
+        if (argc == 3) {
+            return application->run(argc - 2, argv);
+        } else if (argc == 2) {
+            return application->run(argc - 1, argv);
+        }
 
-    return application->run(argc, argv);
+        return application->run(argc, argv);
+    } catch (...) {
+        std::cout << "Shutting down..." << std::endl;
+    }
 }

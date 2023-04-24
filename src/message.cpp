@@ -172,11 +172,13 @@ Message &operator>>(Message &m, NoSuchSegment &d) {
 }
 
 Message &operator<<(Message &m, const PreparedFileSharing &d) {
-    m << d.total_segments << d.assigned_id_for_peer;
+    m << d.total_segments << d.assigned_id_for_peer << d.total_bytes
+      << d.bytes_per_chunk;
     return m;
 }
 Message &operator>>(Message &m, PreparedFileSharing &d) {
-    m >> d.assigned_id_for_peer >> d.total_segments;
+    m >> d.bytes_per_chunk >> d.total_bytes >> d.assigned_id_for_peer >>
+        d.total_segments;
     return m;
 }
 
