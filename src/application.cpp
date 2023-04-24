@@ -496,7 +496,6 @@ void MyApplication::on_hide_window(Gtk::ApplicationWindow *pApplicationWindow) {
 }
 
 void MyApplication::MusicListChanged() {
-    std::cout << "[MUSIC LIST CHANGED]" << std::endl;
     resorting = true;
     PauseMusic();
     CurrentMusic = EmptyMusic;
@@ -514,7 +513,6 @@ void MyApplication::MusicListChanged() {
 
     if (PlayMode == SHUFFLE_ON)
         Shuffle();
-    std::cout << "[MUSIC LIST CHANGE ENDS]" << std::endl;
 }
 
 void MyApplication::set_music_list() {
@@ -585,12 +583,18 @@ void MyApplication::set_music_list() {
 
     std::thread add_tracks_in_background([&collected, this]() {
         for (auto &c : collected) {
+            Track t;
             // do not add that into the database if network tracks have it
-            if (network_tracks.find(c.checksum) == network_tracks.end()) {
+            if (store.search_with_checksum(c.checksum, t) == false ||
+                network_tracks.find(c.checksum) == network_tracks.end()) {
                 store.upsert(c);
+            } else {
+                std::cout << "Not adding this because database already has it!"
+                          << std::endl;
             }
         }
     });
+
     if (AllMusicCopy == nullptr)
         AllMusicCopy = new std::vector<MusicInfoADT>;
     else
@@ -2172,6 +2176,7 @@ void MyApplication::handle_prepared_file_sharing(MessageWithOwner &t) {
 
 // NOTE: this is when ANOTHER PEER returns you a segment
 void MyApplication::handle_return_segment(MessageWithOwner &t) {
+    std::cout << "0" << std::endl;
     ReturnSegment rps;
     t.msg >> rps;
     fs.end_timeout(rps.assigned_id_for_peer);
@@ -2186,6 +2191,7 @@ void MyApplication::handle_return_segment(MessageWithOwner &t) {
         return;
     }
     GetSegment gps;
+    gps.assigned_id_for_peer = rps.assigned_id_for_peer;
     gps.segment_id = fs.get_next_segment_id();
     m << gps;
     fs.start_timeout(rps.assigned_id_for_peer);
